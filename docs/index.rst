@@ -3,7 +3,7 @@ Welcome to Baut's documentation!
 
 .. image:: _static/logo.png
 
-Baut is a unit testing tool runs on Bash and helps you to verify that the programs on Unix/Linux
+Baut (Bash Unit test Tool) is a unit testing tool runs on Bash and helps you to verify that the programs on Unix/Linux
 behave as expected.
 
 Here is a example.

@@ -6,6 +6,32 @@ A test is just a shell function. You can write multiple tests in a file. A test 
 
 The name of a test file must start with ``test_`` and end with ``.sh``. Baut regards a file like ``test_a.sh`` as a test file.
 
+Quick Start
+===========
+
+.. code-block:: bash
+
+   $ mkdir test && cd test
+   $ baut init
+   $ ./run-test.sh
+   1 file, 3 tests
+   #1 /Users/guest/workspace/baut/test/test_sample.sh
+   x test_ng_sample
+   Not implemented
+   # Error(1) detected at the following:
+   #       13	#: @Test
+   #       14	test_ng_sample() {
+   #=>     15	  fail "Not implemented"
+   #       16	}
+   #       17
+   o test_ok_sample
+   ~ test_skip_sample # SKIP Good bye!
+   3 tests, 1 ok, 1 failed, 1 skipped
+
+   💥  1 file, 3 tests, 1 ok, 1 failed, 1 skipped
+   Time: 0 hour, 0 minute, 0 second
+
+
 Test Function
 =============
 
@@ -94,6 +120,8 @@ There may be when you want to read variables from all tests, in that case you ca
 
 .. code-block:: bash
 
+   EVALUATED_ONCE="var"
+
    #: @BeforeAll
    setup_all() {
      GLOBAL_VAR="global"
@@ -108,7 +136,7 @@ There may be when you want to read variables from all tests, in that case you ca
      : # Nothing
    }
 
-``setup_all`` function with ``@BeforeAll`` annotation is called only once before all tests start, and ``teardown_all`` function with ``@AfterAll`` annotation is called only once after all tests ends. These functions are executed in parent shell of tests, ``GLOBAL_VAR`` is visible from all tests.
+``setup_all`` function with ``@BeforeAll`` annotation is called only once before all tests start, and ``teardown_all`` function with ``@AfterAll`` annotation is called only once after all tests ends. These functions are executed in parent shell of tests, ``GLOBAL_VAR`` is visible from all tests. Outside of functions, ``EVALUATED_ONCE`` is also evaluated once with ``source`` command.
 
 
 Commands
@@ -195,7 +223,7 @@ fail
 .. code-block:: bash
 
    test_fail() {
-     fail "Not implementation"
+     fail "Not implemented"
    }
 
 skip

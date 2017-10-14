@@ -24,19 +24,19 @@ You can run tests with ``run`` command, and its command takes some options.
 
 ``-r, --recursively``
 
-With this option, Baut finds test target files recursively under the specified directories.
+Baut finds test target files recursively under the specified directories.
 
 ``-s, --stop-on-error``
 
-With this option, Baut stops test process when a test fails.
+Baut stops test process when a test fails.
 
 ``--no-color``
 
-With this option, a test report will not be colored.
+A test report will not be colored.
 
 ``--no-checksum``
 
-With this option, Baut does not verify checksum of compiled test files.
+Baut does not verify checksum of compiled test files.
 
 ``-f, --format [oneline|default|tap|cat]``
 
