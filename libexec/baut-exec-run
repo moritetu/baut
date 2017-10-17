@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source "$BAUT_LIBEXEC"/baut--load
+
+# Command line options
+declare -A options
+options=(
+  [recursively]=0
+  [stopOnError]=0
+  [dryRun]=0
+  [noCheckSum]=0
+  [noColor]=0
+  [format]="default"
+  [noDebug]=0
+)
+
+# Not options arguments
+arguments=()
+# Test target files
+test_targets=()
+# Compiled baut files
+baut_files=()
+
+# Test time
+test_begin_time_sec=0
+test_end_time_sec=0
+
+# Test total count
+test_total_count=0
+
+run_exit_status=
+
+#: parse_options [arg ...]
+#:   Parse command line options.
+#:
+parse_options() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -r | --recursively)    options[recursively]=1    ;;
+      -s | --stop-on-error)  options[stopOnError]=1    ;;
+      -d | --dry-run)        options[dryRun]=1         ;;
+      --no-checksum)         options[noCheckSum]=1     ;;
+      --no-color)            options[noColor]=1        ;;
+      --no-debug)            options[noDebug]=1        ;;
+      -f | --format)
+        shift
+        loadable "baut--test-report-${1-}" || abort "error: $(self): invalid format: ${1:-}"
+        options[format]="$1"
+        ;;
+      -*)
+        abort "error: $(self): invalid option: $1"
+        ;;
+      *)
+        arguments[${#arguments[@]}]="$1"
+        ;;
+    esac
+    shift
+  done
+}
+
+#: find_test_targets <file or directory> [<file or directory> ...]
+#:   Find test targets with the specified files and directories.
+#:
+find_test_targets() {
+  local arg
+  log_trace "==> find test targets"
+  for arg in "${arguments[@]}"; do
+    if [ -d "$arg" ]; then
+      shopt -s nullglob
+      if [ ${options[recursively]} -eq 0 ]; then
+        for target in "$arg"/"${BAUT_TEST_FILE_PREFIX}"*.sh; do
+          test_targets[${#test_targets[@]}]="$(resolve_link "$target")"
+        done
+      else
+        for target in $(find "$arg" -name "${BAUT_TEST_FILE_PREFIX}*.sh" -type f); do
+          test_targets[${#test_targets[@]}]="$(resolve_link "$target")"
+        done
+      fi
+      shopt -u nullglob
+    else
+      test_targets[${#test_targets[@]}]="$(resolve_link "$arg")"
+    fi
+  done
+  log_trace "test targets(${#test_targets[@]}): ${test_targets[@]}"
+}
+
+#: compile_and_count_number_of_tests
+#:   Compile test target files and count tests.
+#:
+compile_and_count_number_of_tests() {
+  local test_file file_ident compiled_filepath
+  local line=
+  local test_count=0
+  local i=1
+  log_trace "==> compile"
+  for test_file in "${test_targets[@]}"; do
+    file_ident="$(echo "$test_file" | "$baut_hash")"
+    compiled_filepath="$BAUT_TEMPDIR/${file_ident}.baut"
+    log_trace "$i: $test_file => $compiled_filepath"
+    baut-exec-compile "$test_file" > "$compiled_filepath"
+    baut_files[${#baut_files[@]}]="$compiled_filepath"
+    while IFS= read -r line; do
+      if [[ $line =~ @testcount=([[:digit:]]+) ]]; then
+        test_count="${BASH_REMATCH[1]}"
+        break
+      fi
+    done < <(sed -n "/^#:@/p" "$compiled_filepath")
+    (( test_total_count+=$test_count ))
+    log_trace "$i: test_count=$test_count"
+    let i+=1
+  done
+  log_trace "1-$((i-1)): test_total_count=$test_total_count"
+}
+
+#: baut_perform_test_suite
+#:   Perform a test suite.
+#:
+baut_perform_test_suite() {
+  local baut_file line
+  local status=0
+
+  load "baut--test-report" "reporter" "${options[noColor]}"
+  baut_report_code_begin_all "${#baut_files[@]}" "$test_total_count"
+
+  test_begin_time_sec="$(date +'%s')"
+  for baut_file in "${baut_files[@]}"; do
+    log_trace "==> execute tests: $baut_file"
+    baut-exec-test $(build_test_options) "$baut_file" || status=$?
+    if [ $status -ne 0 ] && [ ${options[stopOnError]} -eq 1 ]; then
+      # A code for halt is sent in 'baut-exec-test'.
+      break
+    fi
+  done
+  test_end_time_sec="$(date +'%s')"
+  print_test_time
+  return "$status"
+} 2>&1
+
+#: baut_cleanup_test_suite
+#:   Clean up the current test suite.
+#:
+baut_cleanup_test_suite() {
+  /bin/rm -rf "${baut_files[@]}" ||:
+}
+
+#: dry_run
+#:   Show test functions, DO NOT run tests.
+#:
+dry_run() {
+  local i=1
+  local line fields label funcs test_file
+  local file_num="${#test_targets[@]}"
+  local test_num=0
+  for test_file in "${test_targets[@]}"; do
+    printf "[%d] %s\n" "$i" "$test_file"
+    while IFS= read -r line; do
+      fields=($line)
+      label="${fields[0]}"
+      funcs=(${fields[@]:1})
+      if [[ "$label" =~ after_all ]]; then
+        printf " └─ "
+      else
+        printf " ├─ "
+      fi
+      printf " (%d) %s => %s\n" "${#funcs[@]}" "$label" "${funcs[*]}"
+      if [ "$label" = "test_functions" ]; then
+        ((test_num+=${#funcs[@]}))
+      fi
+    done < <(baut-exec-compile --show-functions "$test_file")
+    ((i+=1))
+  done
+  printf "\n"
+  printf "%s" "$(plural "%d file" "$file_num")"
+  printf ", %s\n" "$(plural "%d test" "$test_num")"
+}
+
+#: print_test_time
+#:   Print test time.
+#:
+print_test_time() {
+  local test_total_time_sec=$((test_end_time_sec - test_begin_time_sec))
+  local hours=0 minutes=0 seconds=0
+  if [ $test_total_time_sec -ge 3600 ]; then
+    hours=$((test_total_time_sec / 3600))
+    let test_total_time_sec=$((test_total_time_sec - 3600 * hours))
+  fi
+  if [ $test_total_time_sec -ge 60 ]; then
+    minutes=$((test_total_time_sec / 60))
+    let test_total_time_sec=$((test_total_time_sec - 60 * minutes))
+  fi
+  seconds="$test_total_time_sec"
+
+  plural "#:TIME;%d hour" "$hours"
+  plural ", %d minute" "$minutes"
+  plural ", %d second" "$seconds"
+  printf "\n"
+}
+
+#: build_report_options
+#:   Build options passed to the receiver.
+#:
+build_report_options() {
+  local opts=""
+  if [ "${options[noColor]}" = "1" ]; then
+    opts+="--no-color"
+  fi
+  opts+=" --format ${options[format]}"
+  echo "$opts"
+}
+
+#: build_test_options
+#:   Build options passed to the baut-exec-test.
+#:
+build_test_options() {
+  local opts=""
+  if [ "${options[noCheckSum]}" = "1" ]; then
+    opts+=" --no-checksum"
+  fi
+  if [ "${options[stopOnError]}" = "1" ]; then
+    opts+=" --stop-on-error"
+  fi
+  if [ "${options[noDebug]}" = "1" ]; then
+    opts+=" --no-debug"
+  fi
+
+  echo "$opts"
+}
+
+parse_options "$@"
+
+# required test-suite
+if [ ${#arguments[@]} -eq 0 ]; then
+  abort "error: $(self): file is not specified: baut run <file|directory> ..."
+fi
+
+# If the directory for compilation does not exist, we make it.
+[ ! -e "$BAUT_TEMPDIR" ] && mkdir -p "$BAUT_TEMPDIR"
+
+find_test_targets
+
+if [ ${options[dryRun]} -eq 1 ]; then
+  dry_run
+  exit
+fi
+
+compile_and_count_number_of_tests
+
+set -o pipefail
+baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_options)
+run_exit_status="$?"
+baut_cleanup_test_suite
+
+exit $run_exit_status
+
+#=begin COMMAND
+#
+# run        Run tests.
+#
+#=end COMMAND
+
+#=begin HELP
+#
+# Usage: baut run [-r|--recursively] [-s|--stop-on-error] [-d|--dry-run] [--no-debug]
+#                 [--no-color] [--no-checksum] [--format [default|oneline|tap|cat]]
+#                 <test> [<test> ...]
+#
+# Run tests with the specified test files or directories.
+#
+# OPTIONS
+#   -r, --recursively
+#     If the specified <test> is directory, baut finds test scripts under the directory recursively.
+#
+#   -s, --stop-on-error
+#     If a test failed in running, baut halts.
+#
+#   -d, --dry-run
+#     DOES NOT run tests, show information tests being executed.
+#
+#   --no-debug
+#     Disable trap DEBUG in doing tests.
+#
+#   --no-color
+#     Set coloring of output off.
+#
+#   --no-checksum
+#     Skip validation of checksum.
+#
+#   -f, --format [oneline|default|tap|cat]
+#     Specify the output format. 'oneline' is a simple output format, only the result and the test name are
+#     displayed in a line. 'cat' is only for debug and it does not format output.
+#     'tap' is Test Anything Protocol format.
+#
+#
+#=end HELP

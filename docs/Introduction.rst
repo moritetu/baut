@@ -30,7 +30,7 @@ You can write test code with Bash on style like xUnit. Test file with Baut is th
      rm flagfile
    }
 
-As described above, you can use conditional expressions with ``[`` or ``[[`` command to verify that the result of commands equals to your expecting result. ``[`` and ``[[`` are buildin commands of Bash. You have only to write conditional expressions with them.
+As described above, you can use conditional expressions with ``[`` or ``[[`` command to verify that the result of commands equals your expecting result. ``[`` and ``[[`` are buildin commands of Bash. You have only to write conditional expressions with them.
 
 ``@Test`` is a directive and it means that the following function is a test. ``@BeforeEach`` means that the following function ``setup`` is a setup function and ``setup`` is called at the first of a test. The function ``teardown`` written after ``@AfterEach`` is a cleanup function and ``teardown`` is called at the last of a test.
 

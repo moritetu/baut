@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+
+source "$BAUT_LIBEXEC"/baut--load
+enable_setopt "euET"
+
+trap 'abort "error: $(self): failed to copy"' ERR
+
+template="$BAUT_ROOT/templates/default"
+declare -A variables=()
+declare -A options=(
+  [silent]=0
+  [force]=0
+)
+
+#: init_project
+#:   Copies a template to the specified output directory.
+#:
+init_project() {
+  local file
+  log_trace "==> copy '$template' to '$outdir'"
+  mkdir -p "$outdir"
+  if [ -n "$(ls "$outdir"/* 2>/dev/null)" ]; then
+    if [ ${options[force]} -ne 1 ]; then
+      abort "error: $(self): files already exist: '$outdir', to overwrite files, use '-f' option."
+    fi
+  fi
+  /bin/cp -rf "$template"/* "$outdir/"
+  for file in $(find "$outdir" -type f); do
+    log_trace "replace place holders: $file"
+    sed -i "" -e "1,$ {
+      $(make_replace_strings_rule)
+    }" "$file"
+  done
+  if [ -e "$template/README" ] && [ ${options[silent]} -ne 1 ]; then
+    cat "$template/README"
+  fi
+}
+
+#: make_replace_strings_rule
+#:   Prints rules that 'sed' takes.
+#:
+make_replace_strings_rule() {
+  local key value
+  for key in "${!variables[@]}"; do
+    printf "%s\n" "s|%${key}%|${variables[$key]}|g"
+  done
+}
+
+
+# Parse command line options.
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t | --template)
+      shift
+      [ -z "${1:-}" ] && abort "error: $(self): template is not specified: -t <template>"
+      if [ "${1:0:1}" != "/" ]; then
+        template="$BAUT_ROOT/templates/$1"
+      else
+        template="$1"
+      fi
+      ;;
+    -D*)
+      arg="${1:2}"
+      d_name="${arg%%=*}"
+      d_value="${arg/${d_name}=/}"
+      variables["$d_name"]="$d_value"
+      ;;
+    -f)
+      options[force]=1
+      ;;
+    -s | --silent)
+      options[silent]=1
+      ;;
+    -*)
+      abort "error: $(self): invalid option: $1"
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+
+outdir="${1:-.}"
+
+if [ ! -e "$template" ]; then
+  abort "error: $(self): template not found: $template"
+fi
+
+if [ ! -e "$outdir" ]; then
+  mkdir -p "$outdir"
+fi
+
+init_project
+exit $?
+
+#=begin COMMAND
+#
+# init       Generates test files from a template.
+#
+#=end COMMAND
+
+#=begin HELP
+#
+# Usage: baut init [-t <template>] [-f] [-s] <outdir>
+#
+# Generates test files from a template. 'init' just copies files or directories
+# with the specified template.
+#
+# OPTIONS
+#   -t, --template <template>
+#     Copies from a specified template.
+#
+#   -f
+#     Overwrites.
+#   -s
+#     Silently.
+#
+#   -DVARNAME=VALUE
+#     Passes the specified variables to place holders.
+#
+#
+#=end HELP

@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+
+# receiver or reporter
+if [ $# -eq 0 ]; then
+  echo "usage: source baut--test-report <role> [OPTIONS]" >&2
+  exit 1
+fi
+
+BAUT_REPORT_CONTEXT="$1"
+shift
+
+
+# Codes used in report.
+#
+# |- RDY
+# |- STR
+# |- [STRT|STRTDT]
+#   |- [OK|SKP|ERR]
+# |- ENDT
+# |- END
+#
+# STP  Send when halt a test process.
+#
+
+#: Reporter
+
+
+# usage: load "baut--test-report" "reporter"
+if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
+  #: baut_report_print_args [string ...]
+  #:   Print baut report arguments.
+  #: ex: baut_report_print_args "arg1" "arg2"
+  baut_report_print_args() {
+    IFS=$'\t' eval 'echo "$*"'
+  }
+
+  #: baut_report_print_code <code>
+  #:   Print a baut report code.
+  #: ex: baut_report_print_code "OK"
+  baut_report_print_code() {
+    printf "#:%s;" "$1"
+  }
+
+  #: baut_report_code_ok <function>
+  #:   Print code OK. Send when a test is ok.
+  #:
+  baut_report_code_ok() {
+    baut_report_print_code "OK"
+    baut_report_print_args "$1"
+  }
+
+  #: baut_report_code_err <function>
+  #:   Print code ERR. Send when a test failed.
+  #:
+  baut_report_code_err() {
+    baut_report_print_code "ERR"
+    baut_report_print_args "$1"
+  }
+
+  #: baut_report_code_skip <function> [<message>]
+  #:   Print code SKP. Send when a test skipped.
+  #:
+  baut_report_code_skip() {
+    baut_report_print_code "SKP"
+    baut_report_print_args "$1" "${2:-}"
+  }
+
+  #: baut_report_code_deprecated <function> [<message>]
+  #:   Print code DPR. Send when a test is deprecated.
+  #:
+  baut_report_code_deprecated() {
+    baut_report_print_code "DPR"
+    baut_report_print_args "$1" "${2:-}"
+  }
+
+  #: baut_report_code_begin_test_set <baut_file> <test_file> <test_count>
+  #:   Print code STR. Send when a test set starts.
+  #:
+  baut_report_code_begin_test_set() {
+    baut_report_print_code "STR"
+    baut_report_print_args "$1" "$2" "$3"
+  }
+
+  #: baut_report_code_end_test_set <baut_file> <test_file>
+  #:   Print code END. Send when a test set ends.
+  #:
+  baut_report_code_end_test_set() {
+    baut_report_print_code "END"
+    baut_report_print_args "$1" "$2"
+  }
+
+  #: baut_report_code_begin_test <function> [<alias_name>]
+  #:   Print code STRT. Send when a test starts.
+  #:
+  baut_report_code_begin_test() {
+    baut_report_print_code "STRT"
+    baut_report_print_args "$1" "${2:-}"
+  }
+
+  #: baut_report_code_begin_todo_test <todo> <function> [<alias_name>]
+  #:   Print code STRTDT. Send when a todo test starts.
+  #:
+  baut_report_code_begin_todo_test() {
+    baut_report_print_code "STRTDT"
+    baut_report_print_args "$1" "$2" "${3:-}"
+  }
+
+  #: baut_report_end_test <function> <status>
+  #:   Print code ENDT. Send when a test ends.
+  #:
+  baut_report_code_end_test() {
+    baut_report_print_code "ENDT"
+    baut_report_print_args "$1"
+  }
+
+  #: baut_report_code_begin_all <file_num> <test_count>
+  #:   Print code RDY. Send at the beginning of a test suite.
+  #:
+  baut_report_code_begin_all() {
+    baut_report_print_code "RDY"
+    baut_report_print_args "$1" "$2"
+  }
+
+  #: baut_report_code_stop_test <baut_file> <test_file> [<function>]
+  #:   Print code STP. Send at the stop of tests.
+  #:
+  baut_report_code_stop_test() {
+    baut_report_print_code "STP"
+    baut_report_print_args "$1" "$2" "${3:-}"
+  }
+fi
+
+
+#: Receiver
+
+
+# usage: echo "#:OK;\ttest_function" | load "baut--test-report" "receiver" "0"
+if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
+  # Test total count all over the tests
+  declare test_total_exec_count=0
+  declare test_total_ok_count=0
+  declare test_total_ng_count=0
+  declare test_total_skip_count=0
+  # Test count for a test set.
+  declare test_ok_count=0
+  declare test_ng_count=0
+  declare test_skip_count=0
+
+  declare -a baut_report_buffer=()
+  declare baut_report_color=
+
+  declare -A receiver_options=(
+    [noColor]=0
+    [format]="default"
+  )
+
+  declare -r BAUT_REPORT_CODE_REGEX="^([[:alpha:]]+);(.+)$"
+
+  #: baut_report_flush_buffer [<prefix>]
+  #:   Flush buffer.
+  #:
+  baut_report_flush_buffer() {
+    local prefix="${1:-  }"
+    local line
+    for line in "${baut_report_buffer[@]}"; do
+      printf "%s%s\n" "$prefix" "$line"
+    done
+    baut_report_buffer=()
+  }
+
+  #: baut_report_begin_color 3<foreground_color> 4<background_color> <attribute>
+  #:   Set color on with the specified code number.
+  #:
+  baut_report_begin_color() {
+    [ ${receiver_options[noColor]} -eq 1 ] && return 0
+    local foreground_color="${1:-}"
+    local background_color="${2:-}"
+    local attribute="${3:-}"
+    local colorset=()
+    [ -n "$foreground_color" ] && colorset[${colorset[@]}]="3$foreground_color"
+    [ -n "$background_color" ] && colorset[${colorset[@]}]="4$background_color"
+    [ -n "$attribute" ] && colorset[${colorset[@]}]="$attribute"
+    baut_report_color="$(IFS=";" ; echo "${colorset[*]}")"
+    printf "\033[${baut_report_color}m"
+  }
+
+  #: baut_report_end_color
+  #:   Set color off.
+  #:
+  baut_report_end_color() {
+    [ ${receiver_options[noColor]} -eq 1 ] && return 0
+    __baut_report_color=
+    printf "\033[m"
+  }
+
+  #: baut_report_reset_test_state
+  #:   Reset test ok/ng/skip count.
+  #:
+  baut_report_reset_test_state() {
+    test_ok_count=0
+    test_ng_count=0
+    test_skip_count=0
+  }
+
+  baut_report_sum_test_set_report() {
+    ((test_total_ok_count+=test_ok_count,1))
+    ((test_total_ng_count+=test_ng_count,1))
+    ((test_total_skip_count+=test_skip_count,1))
+    ((test_total_exec_count=test_total_ok_count+test_total_ng_count+test_total_skip_count,1))
+  }
+
+  # Parse options
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --no-color)  receiver_options[noColor]=1 ;;
+      --format)
+        shift
+        receiver_options[format]="$1"
+        ;;
+      -*)
+        abort "error: $(self): invalid option: $1"
+        break
+        ;;
+      esac
+    shift
+  done
+  declare -r receiver_options
+
+  # This is a hook for users.
+  load_if_exists "local--test-report" || {
+    # Format stream
+    local formatter="baut--test-report-${receiver_options[format]}"
+    load_if_exists "$formatter" || abort "error: $(self): invalid format: ${receiver_options[format]}"
+  }
+fi
+
+#=begin HELP
+#
+# Usage: source baut--test-report <role> [OPTIONS]
+#        echo "#:BEGIN;" | source "baut--test-report" <role> [--format <format>] [--no-color]
+#
+# <role> receiver or reporter
+# With 'reporter', you can use baut_report_xxx functions.
+# With 'receiver', you need to handle the output with report codes sent from
+# ahead of a pipe stream.
+#
+# OPTIONS
+#   --no-color
+#     Color off.
+#
+#   --format [oneline|default|tap|cat]
+#     Output format. 'oneline' is a simple format. Only the result and the test name are displayed.
+#
+#
+#=end HELP

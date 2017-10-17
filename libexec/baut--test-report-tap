@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+local line=
+local baut_code=
+local args=
+local in_test=0
+local test_name=
+local test_alias_name=
+local test_no=0
+
+local test_total_count=0
+local test_set_count=0
+
+
+while IFS= read -r line
+do
+  if [ "${line:0:2}" = "#:" ]; then
+    if [[ "${line:2}" =~ $BAUT_REPORT_CODE_REGEX ]]; then
+      baut_code="${BASH_REMATCH[1]}"
+      OLDIFS="$IFS"; IFS=$'\t'
+      args=(${BASH_REMATCH[2]})
+      IFS="$OLDIFS"
+    fi
+
+    case "$baut_code" in
+      RDY) # Begin a test suite
+        printf "1..${args[1]}\n"
+        test_total_count="${args[1]}"
+        ;;
+      STR) # Begin a test set
+        baut_report_reset_test_state
+        ((test_set_count+=1))
+        ;;
+      END) # End a test set
+        baut_report_sum_test_set_report
+        ;;
+      STRT) # Begin a test
+        in_test=1
+        test_name="${args[0]}"
+        test_alias_name="${args[1]:-}"
+        ((test_no+=1))
+        ;;
+      STRTDT) # Begin a todo test
+        in_test=1
+        test_name="${args[0]} # TODO ${args[1]:-}"
+        ((test_no+=1))
+        ;;
+      ENDT) # End a test
+        in_test=0
+        test_name=""
+        test_alias_name=""
+        ;;
+      OK) # End a test on OK
+        printf "︎ok %d - %s\n" "$test_no" "${test_alias_name:-$test_name}"
+        baut_report_flush_buffer "# "
+        ((test_ok_count+=1))
+        ;;
+      ERR) # End a test on NG
+        printf "not ok %d - %s\n" "$test_no" "${test_alias_name:-$test_name}"
+        baut_report_flush_buffer "# "
+        ((test_ng_count+=1))
+        ;;
+      SKP) # Skip a test
+        printf "ok %d - # SKIP %s %s\n" "$test_no" "${test_alias_name:-$test_name}" "${args[1]:-}"
+        baut_report_flush_buffer "# "
+        ((test_skip_count+=1))
+        ;;
+      DPR) # Deprecated test
+        # Nothing
+        ;;
+      STP) # Halt tests
+        printf "Bail out! %s\n" "Error detected in ${args[1]}(${args[2]:-})"
+        baut_report_sum_test_set_report
+        exit 1
+        ;;
+    esac
+    continue
+  fi
+  # We buffer output in a test.
+  if [ $in_test -eq 1 ]; then
+    baut_report_buffer["${#baut_report_buffer[@]}"]="$line"
+  fi
+done

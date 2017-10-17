@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -eu
+
+source "$BAUT_LIBEXEC"/baut--load
+
+#: baut_pretty_usage
+#:   Print pretty usage.
+#:
+baut_pretty_usage() {
+  cat<<EOS
+Usage: baut [-v] [-h] [--d[0-4]] [run|<command>] [<args>]
+EOS
+}
+
+#: baut_help
+#:   Print description.
+#:
+baut_help() {
+  cat<<DETAIL
+
+OPTIONS
+  -v, --version       Show version.
+  -h, --help          Show usage.
+  --d[0-4]            Set log level to TRACE(0), DEBUG(1), INFO(2), WARN(3), ERROR(4)
+
+COMMANDS
+$(collect_command_description)
+
+Show more available information about a specific command.
+'baut <command> [-h|--help]'
+
+DETAIL
+}
+
+#: baut_usage
+#:   Print detailed usage.
+#:
+baut_usage() {
+  baut_pretty_usage
+  baut_help
+}
+
+#: collect_command_description
+#:   Collect COMMAND block in the command files and print.
+#:
+collect_command_description() {
+  local format="${1:-  %b\n}"
+  local line=
+  shopt -s nullglob
+  for command_path in "$BAUT_LIBEXEC"/baut-exec-*; do
+    while IFS= read -r line; do
+      printf "$format" "$line"
+    done < <(get_comment_block "$command_path" "COMMAND")
+  done
+  shopt -u nullglob
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h | --help)
+      baut_help && exit
+      ;;
+    -p | --pretty)
+      baut_pretty_usage && exit
+      ;;
+  esac
+done
+
+baut_usage
+exit

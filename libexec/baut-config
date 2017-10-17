@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+
+#:@BAUT_LOG_LEVEL
+#: Log level.
+#:   0:DEBUG 1:INFO 2:WARN 3:ERROR
+: ${BAUT_LOG_LEVEL:=2}
+
+
+#:@BAUT_LOG_DATE_FORMAT
+#: Date format of log output.
+#:   ex: log_debug "debug" ==> 2017-09-01 12:12:00 [DEBUG] debug
+: ${BAUT_LOG_DATE_FORMAT:='%Y-%m-%d %H:%M:%S'}
+
+
+#:@BAUT_LOG_FORMAT
+#: Log format of log output, this string is evaluated by eval command.
+#: Ensure that malicious codes are not included.
+#:   ex: log_debug "debug" ==> 2017-09-01 12:12:00 [DEBUG] sourcename:lineno - debug
+: ${BAUT_LOG_FORMAT:='$(basename "${BASH_SOURCE[1]}"):${BASH_LINENO[0]} - $@'}
+
+
+#:@BAUT_TEST_FILE_PREFIX
+#: The name prefix with which test files start.
+#:   ex: test_arguments.sh
+#:       test_options.sh
+declare -r BAUT_TEST_FILE_PREFIX=${BAUT_TEST_FILE_PREFIX:-"test_"}
+
+
+#:@BAUT_LOAD_PATH
+#: The paths in which import command searches libraries.
+BAUT_LOAD_PATH=( "${BAUT_HELPER:-$BAUT_ROOT/helpers}" "${BAUT_LIBEXEC:-}" "$PWD/helpers"  "." )
+
+
+#:@BAUT_TEMPDIR
+#: The directory into which compiled files are output
+declare -r BAUT_TEMPDIR=${BAUT_TEMPDIR:-"${TMPDIR:-/tmp}"}
+
+
+# show_config
+#   Print baut configurations.
+#
+show_config() {
+  OLDIFS="$IFS"
+  IFS=$'\n'
+  local var varname varleft in_section line comment
+  declare -A variables
+
+  for var in $(set | grep "^BAUT_" 2> /dev/null); do
+    varname="${var/=*/}"
+    varleft="${varname}="
+    variables[$varname]="${var:${#varleft}}"
+  done
+  IFS="$OLDIFS"
+
+  in_section=0
+  varname=
+  while IFS= read -r line; do
+    if [[ $line =~ ^$ ]] || [ "${line:0:2}" != "#:" ]; then
+      if [ $in_section -eq 1 ] && [ -n "$varname" ]; then
+        in_section=0
+        printf "%s\n\n" "=> ${variables[$varname]:-}"
+        varname=
+      fi
+      continue
+    fi
+    in_section=1
+    comment="${line:2}"
+    [[ $line =~ @(.*) ]] && varname="${BASH_REMATCH[1]}"
+    echo "$comment"
+  done < "$BASH_SOURCE"
+
+  if [ -n "$varname" ]; then
+    printf "%s\n\n" "=> ${variables[$varname]:-}"
+  fi
+}
+
+
+# Print comment lines in this file.
+#
+#  #:@<variable>
+#  #:  This is a comment.
+#  #:  This is a comment.
+#
+if [ "${1:-}" = "show" ]; then
+  show_config
+fi
+
+:

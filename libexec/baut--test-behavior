@@ -1,0 +1,423 @@
+#!/usr/bin/env bash
+#
+# This support functions are loaded from compiled test sources.
+#
+load "baut--test-report" "reporter"
+
+
+#: baut_before_all
+#:   Called before a test set begins.
+#:
+baut_before_all() {
+  __baut_running_function="$(self)"
+  local func_name
+  for func_name in "${before_all_functions[@]}"; do
+    "$func_name"
+    IFS="$__baut_old_IFS"
+  done
+}
+
+#: baut_after_all
+#:   Called after a test set has done.
+#:
+baut_after_all() {
+  __baut_running_function="$(self)"
+  local func_name
+  for func_name in "${after_all_functions[@]}"; do
+    "$func_name"
+    IFS="$__baut_old_IFS"
+  done
+}
+
+#: baut_start_test <test-start-function>
+#:   Start a test set.
+#:
+baut_start_test() {
+  local test_start_function="$1"
+  add_trap_callback "EXIT" "baut_end_test"
+  add_trap_callback "ERR" "baut_next_test"
+  register_trap_callback "EXIT" "ERR"
+  baut_report_code_begin_test_set "$BAUT_FILE" "$BAUT_TEST_FILE" "${#BAUT_TEST_FUNCTIONS[@]}"
+  "$test_start_function"
+}
+
+#: baut_end_test <status>
+#:   End a test set.
+#:
+baut_end_test() {
+  # Pipe is alive?
+  # local pipe_num="${#PIPESTATUS[@]}"
+  # if [ $pipe_num -ne 0 ]; then
+  #   return
+  # fi
+  baut_report_code_end_test_set "$BAUT_FILE" "$BAUT_TEST_FILE"
+}
+
+#: baut_next_test <status>
+#:   Judge whether we should go to the next test.
+#:
+baut_next_test() {
+  local status="$baut_trap_exit_status"
+  if [ "$__baut_running_function" = "baut_before_all" ] \
+     || [ "$__baut_running_function" = "baut_after_all" ]; then
+    baut_report_code_err "$__baut_running_function"
+  fi
+  if [ $status -ne 0 ]; then
+    if [ ${baut_test_options[stopOnError]} -eq 1 ]; then
+      baut_report_code_stop_test "$BAUT_FILE" "$BAUT_TEST_FILE" "$BAUT_TEST_FUNCTION_NAME"
+      exit $status
+    fi
+  fi
+}
+
+#: deprecated
+#:   Send a deprecated code.
+#:
+deprecated() {
+  local message="$1"
+  baut_report_code_deprecated "$BAUT_TEST_FUNCTION_NAME" "$message"
+}
+
+
+__baut_test_stack_trace=()
+__baut_test_stack_idx=0
+
+#: _baut_enable_debug_trap
+#:   Enable debug trap.
+#:
+_baut_enable_debug_trap() {
+  if [ ${baut_test_options[noDebug]} -eq 0 ]; then
+    trap '_baut_debug_trap "$BASH_SOURCE" "$LINENO"' DEBUG
+    __baut_test_stack_trace=()
+    __baut_test_stack_idx=0
+  fi
+}
+
+#: _baut_disable_debug_trap
+#:   Disable debug trap.
+#:
+_baut_disable_debug_trap() {
+  if [ ${baut_test_options[noDebug]} -eq 0 ]; then
+    trap - DEBUG
+    __baut_test_stack_trace=()
+    __baut_test_stack_idx=0
+  fi
+}
+
+#: _baut_debug_trap
+#:   Callback for debug trap.
+#:
+_baut_debug_trap() {
+  local source_file="$1"
+  local lineno="$2"
+  if [ "$BAUT_TEST_FILE" = "$source_file" ]; then
+    if [ $__baut_test_stack_idx -gt 0 ]; then
+      __baut_test_stack_trace[${#__baut_test_stack_trace[@]}]="$lineno;$BASH_COMMAND"
+    fi
+    ((__baut_test_stack_idx+=1))
+  fi
+}
+
+#: baut_extract_error_hint_lines <source_file> <line_no> [<backward_range>] [<forward_range>]
+#:   Extract lines from the source file.
+#:
+baut_extract_error_hint_lines() {
+  local source_file="$1"
+  local lineno="$2"
+  local backward_range="${3:-3}"
+  local forward_range="${4:-3}"
+  local start_lineno=$((lineno-backward_range))
+  local end_lineno=$((lineno+forward_range))
+  [ $start_lineno -le 0 ] && start_lineno=1
+  cat -n "$source_file" | sed -n "$start_lineno,${end_lineno}p"
+}
+
+#: baut_print_stack_trace <status> <last_index> [<backward_range>] [<forward_range>]
+#:   Print stack trace.
+#:
+baut_print_stack_trace() {
+  local trap_exit_status="$1"
+  local last_index="${2:-2}"
+  local backward_range="${3:-3}"
+  local forward_range="${4:-3}"
+  if [ ${#__baut_test_stack_trace[@]} -eq 0 ]; then
+    return 0
+  fi
+  last_index=$((${#__baut_test_stack_trace[@]}-$last_index))
+  local error_detected_function=
+  if [ $last_index -ge 0 ]; then
+    local error_command="${__baut_test_stack_trace[$last_index]}"
+    local error_lineno="${error_command%%;*}"
+    local line
+    printf "# Error($trap_exit_status) detected at the following:\n"
+    while IFS= read -r line; do
+      local tokens=($line)
+      if [ "$error_lineno" = "${tokens[0]}" ]; then
+        printf "#=> %s\n" "$line"
+      else
+        printf "#   %s\n" "$line"
+      fi
+    done < <(baut_extract_error_hint_lines "$BAUT_TEST_FILE" "$error_lineno" $backward_range $forward_range)
+  fi
+}
+
+
+#: --- In subprocess callers ---
+
+
+# The result of 'run' command
+result=
+lines=()
+# The exit status code of 'run' command
+status=
+# Standard output
+stdout=
+stdout_lines=()
+# Standard error output
+stderr=
+stderr_lines=()
+
+# Variables for internal
+__baut_test_error=0
+__baut_test_skip=0
+__baut_running_function=""
+
+readonly __baut_old_IFS="$IFS"
+
+#: stop [text ...]
+#:   Stop test process.
+#:
+stop() {
+  __baut_test_error=1
+  if [ $# -eq 0 ]; then
+    echo "#! The test process was halt in '$BAUT_TEST_FUNCTION_NAME'."
+  else
+    echo "$@"
+  fi
+  exit 3
+}
+
+#: fail [text ...]
+#:   Abort.
+#:
+fail() {
+  __baut_test_error=1
+  [ $# -ne 0 ] && echo "$@"
+  baut_print_stack_trace 1 1 2 2
+  _baut_disable_debug_trap
+  pop_setopt
+  baut_after_each
+  exit 1
+}
+
+#: skip <text>
+#:   Exit at status code 0.
+#:
+skip() {
+  __baut_test_skip=1
+  _baut_disable_debug_trap
+  pop_setopt
+  baut_after_each
+  baut_report_code_skip "${FUNCNAME[1]}" "${1:-}"
+  exit 0
+}
+
+#: run <command>
+#:   Run the command.
+#:   standard output and standard error output save into 'result' variable.
+#:   And you can see command exit status code with 'status' variable.
+#:   *Notice* You cannot use redirection in your command.
+#: ex: run ./my.sh
+#:     [[ $result =~ hoge ]]
+#:
+run() {
+  disable_setopt "eET"
+  disable_trap "ERR"
+  # run the command in subprocess
+  result="$("$@" 2>&1)"
+  status="$?"
+  local OLDIFS="$IFS"
+  IFS=$'\n'
+  lines=($result)
+  IFS="$OLDIFS"
+  enable_trap "ERR"
+  pop_setopt
+}
+
+#: run2 <command>
+#:   Run the command.
+#:   You can see standard output with 'stdout' variable and standard error output with 'stderr' variable.
+#:   And you can see command exit status code with 'status' variable.
+#:   *Notice* You cannot use redirection in your command.
+#: ex: run2 ./my.sh
+#:     [[ $stdout =~ ok ]]
+#:     [[ $stderr =~ ng ]]
+#:
+run2() {
+  local pid="$BASHPID"
+  local fd1="$BAUT_TEMPDIR/stdout.$pid.baut"
+  local fd2="$BAUT_TEMPDIR/stderr.$pid.baut"
+  disable_setopt "eET"
+  disable_trap "ERR"
+  # run the command in subprocess
+  ("$@") 2> "$fd2" 1> "$fd1"
+  status="$?"
+  [ -e "$fd1" ] && stdout="$(cat<$fd1)"
+  [ -e "$fd2" ] && stderr="$(cat<$fd2)"
+  local OLDIFS="$IFS"
+  IFS=$'\n'
+  stdout_lines=($stdout)
+  stderr_lines=($stderr)
+  result="$stdout"
+  lines=($stdout)
+  IFS="$OLDIFS"
+  /bin/rm -rf "$BAUT_TEMPDIR"/{stdout,stderr}."$pid".baut ||:
+  enable_trap "ERR"
+  pop_setopt
+}
+
+#: eval2 <command>
+#:   Run the command.
+#:   You can see standard output with 'stdout' variable and standard error output with 'stderr' variable.
+#:   And you can see command exit status code with 'status' variable.
+#:   *Notice* Be carefule not to passs malicious commands.
+#:
+#: ex: eval2 "echo foo >&2"
+#:     [[ $stderr =~ foo ]]
+#:
+eval2() {
+  local pid="$$"
+  local fd1="$BAUT_TEMPDIR/stdout.$pid.baut"
+  local fd2="$BAUT_TEMPDIR/stderr.$pid.baut"
+  local OLDIFS="$IFS"
+  disable_setopt "eET"
+  disable_trap "ERR"
+  # run the command in subprocess
+  (eval $(echo "$*") 2> "$fd2" 1> "$fd1")
+  status="$?"
+  [ -e "$fd1" ] && stdout="$(cat<$fd1)"
+  [ -e "$fd2" ] && stderr="$(cat<$fd2)"
+  result="$stdout"
+  IFS=$'\n'
+  stdout_lines=($stdout)
+  stderr_lines=($stderr)
+  lines=($stdout)
+  IFS="$OLDIFS"
+  /bin/rm -rf "$BAUT_TEMPDIR"/{stdout,stderr}."$pid".baut ||:
+  enable_trap "ERR"
+  pop_setopt
+}
+
+#: _baut_run_test
+#:   Run a test.
+#:
+baut_run_test() {
+  local test_alias_name="$1"
+  declare -r __baut_running_function="$(self)"
+  __baut_test_error=0
+
+  baut_report_code_begin_test "${BAUT_TEST_FUNCTION_NAME}" "${test_alias_name:-}"
+  reset_trap_callback "EXIT" "ERR"
+  add_trap_callback "EXIT" "_baut_exit_trap"
+  add_trap_callback "ERR" "_baut_error_trap"
+  register_trap_callback "EXIT" "ERR"
+
+  baut_before_each
+  {
+    # In running a test, we do not set 'e' options to catch error.
+    disable_setopt "e"
+    _baut_enable_debug_trap
+    "$BAUT_TEST_FUNCTION_NAME"
+    _baut_disable_debug_trap
+    pop_setopt
+  }
+  baut_after_each
+}
+
+#: _baut_run_todo_test
+#:   Run a todo test.
+#:
+baut_run_todo_test() {
+  local todo="${1:-}"
+  local test_alias_name="${2:-}"
+  declare -r __baut_running_function="$(self)"
+  __baut_test_error=0
+
+  baut_report_code_begin_todo_test "$todo" "${BAUT_TEST_FUNCTION_NAME}" "${test_alias_name:-}"
+  reset_trap_callback "EXIT" "ERR"
+  add_trap_callback "EXIT" "_baut_exit_trap"
+  add_trap_callback "ERR" "_baut_error_trap"
+  register_trap_callback "EXIT" "ERR"
+
+  baut_before_each
+  {
+    # In running a test, we do not set 'e' options to catch error.
+    disable_setopt "e"
+    _baut_enable_debug_trap
+    "$BAUT_TEST_FUNCTION_NAME"
+    IFS="$__baut_old_IFS"
+    _baut_disable_debug_trap
+    pop_setopt
+  }
+  baut_after_each
+}
+
+#: baut_before_each
+#:   Run before_each functions.
+#:
+baut_before_each() {
+  declare -r __baut_running_function="$(self)"
+  local func_name
+  _baut_enable_debug_trap
+  for func_name in "${before_each_functions[@]}"; do
+    "$func_name"
+    IFS="$__baut_old_IFS"
+  done
+  _baut_disable_debug_trap
+}
+
+#: baut_after_each
+#:   Run after_each functions.
+#:
+baut_after_each() {
+  declare -r __baut_running_function="$(self)"
+  local func_name
+  _baut_enable_debug_trap
+  for func_name in "${after_each_functions[@]}"; do
+    "$func_name"
+    IFS="$__baut_old_IFS"
+  done
+  _baut_disable_debug_trap
+}
+
+#: _baut_exit_trap <status>
+#:   Callback for trap EXIT.
+#:
+_baut_exit_trap() {
+  local trap_exit_status="$baut_trap_exit_status"
+  reset_trap_callback "ERR" "EXIT"
+  if [ $__baut_test_error -eq 0 ] && [ $trap_exit_status -eq 0 ]; then
+    if [ $__baut_test_skip -eq 0 ]; then
+      baut_report_code_ok "$BAUT_TEST_FUNCTION_NAME"
+    else
+      : # skip
+    fi
+  else
+    baut_report_code_err "$BAUT_TEST_FUNCTION_NAME"
+    if [ ${baut_test_options[stopOnError]} -eq 1 ] || [ $trap_exit_status -eq 3 ]; then
+      exit $trap_exit_status
+    fi
+  fi
+  baut_report_code_end_test "$BAUT_TEST_FUNCTION_NAME" "$trap_exit_status"
+  # We always exit with status code 0.
+  exit 0
+}
+
+#: _baut_error_trap <status>
+#:   Callback for trap ERR.
+#:
+_baut_error_trap() {
+  __baut_test_error="$baut_trap_exit_status"
+  reset_trap_callback "ERR"
+  baut_print_stack_trace "$baut_trap_exit_status"
+}

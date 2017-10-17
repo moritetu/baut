@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+echo "Baut 0.1.0-beta"

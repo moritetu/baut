@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+source "$BAUT_LIBEXEC"/baut--load
+enable_setopt "euET"
+
+
+# Test execution options
+declare -A baut_test_options=(
+  [noCheckSum]=0     # 0: check,      1: no check
+  [stopOnError]=0    # 0: no stop,    1: stop
+  [noDebug]=0        # 0: with debug, 1: no debug
+)
+
+#: baut_validate_checksum <file>
+#:   Validate the checksum of the file.
+#:
+baut_validate_checksum() {
+  local baut_file="$1"
+  local test_file=""
+  local baut_file_checksum=""
+  local line
+  if [ ! -e "$baut_file" ]; then
+    abort "error: $(self): file not found: $baut_file"
+  fi
+  while IFS= read -r line; do
+    if [ -z "$baut_file_checksum" ] && [[ "$line" =~ @checksum=([[:alnum:]]+) ]]; then
+      baut_file_checksum="${BASH_REMATCH[1]}"
+    elif [ -z "$test_file" ] &&  [[ "$line" =~ @filepath=(.*) ]]; then
+      test_file="${BASH_REMATCH[1]}"
+    fi
+  done < <(sed -n "/^#:@/p" "$baut_file")
+  if [ -z "$test_file" ]; then
+    abort "error: $(self): @filepath not found in '$baut_file'"
+  fi
+  if [ ! -e "$test_file" ]; then
+    abort "error: $(self): invalid compiled source: $baut_file, $test_file"
+  fi
+  local checksum="$(cat "$test_file" | "$baut_hash")"
+  log_trace "checksum: compiled=$baut_file_checksum, calculated=$checksum"
+  if [ "$checksum" != "$baut_file_checksum" ]; then
+    # The test_file may be changed from compilation.
+    abort "error: $(self): invalid checksum: compiled=$baut_file_checksum, test_file=$checksum"
+  fi
+}
+
+#: baut_load_test
+#:   Load the specified baut file and include it.
+#:   Then a series of tests in the file will run.
+baut_load_test() {
+  local baut_file="$1"
+  local status=0
+  local extension="${baut_file##*.}"
+
+  if [ "$extension" != "baut" ]; then
+    abort "error: $(self): the file must end with '.baut', but the file is '$baut_file'"
+  fi
+
+  if [ ! -e "$baut_file" ]; then
+    abort "error: $(self): file does not exist: $baut_file"
+  fi
+
+  if [ ${baut_test_options[noCheckSum]} -eq 0 ]; then
+    baut_validate_checksum "$baut_file"
+  fi
+
+  readonly BAUT_FILE="$baut_file"
+
+  add_trap_callback "EXIT" "baut_cleanup_test"
+  register_trap_callback "EXIT"
+
+  # Ok, we run a series of tests in the file!
+  (
+    cdhere() {
+      cd "$(dirname "$BAUT_TEST_FILE")"
+    }
+
+    # Disable traps set in parent process.
+    reset_trap_callback
+    # This options should not be changed during the test.
+    readonly baut_test_options
+    # Load the test file and run tests.
+    source "$baut_file"
+  )
+}
+
+#: baut_cleanup_test
+#:   Clean up this test.
+#:
+baut_cleanup_test() {
+  rm -rf "$BAUT_FILE" ||:
+}
+
+
+# Parse command line options.
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-checksum)   baut_test_options[noCheckSum]=1   ;;
+    --stop-on-error) baut_test_options[stopOnError]=1  ;;
+    --no-debug)      baut_test_options[noDebug]=1      ;;
+    -*)
+      abort "error: $(self): invalid option: $1"
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+
+if [ $# -eq 0 ]; then
+  abort "error: $(self): <file> is not specified: baut test <file>"
+fi
+
+baut_load_test "$1"
+exit "$?"
+
+#=begin COMMAND
+#
+# test       Run tests in a file and print its result.
+#            Ordinally this command is called in 'run' command.
+#
+#=end COMMAND
+
+#=begin HELP
+#
+# Usage: baut test [--no-checksum] [--stop-on-error] <baut_file>
+#
+# Run tests in a baut_file. <baut_file> must end with '.baut' and it is ordinally generated
+# in the process of 'run' command.
+#
+# OPTIONS
+#   --no-checksum
+#     With this option, be not checked whether the checksum of a baut file equals to
+#     the one of an original test file.
+#
+#   --stop-on-error
+#     With this option, test process halts when a test failed.
+#
+#
+#=end HELP

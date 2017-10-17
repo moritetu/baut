@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+local line=
+local baut_code=
+local args=
+local in_test=0
+
+local test_files=0
+local test_total_count=0
+local test_time=
+
+local test_set_count=0
+local test_set_test_count=0
+
+local test_name=
+local test_alias_name=
+local test_deprecated=
+
+while IFS= read -r line
+do
+  if [ "${line:0:2}" = "#:" ]; then
+    if [[ "${line:2}" =~ $BAUT_REPORT_CODE_REGEX ]]; then
+      baut_code="${BASH_REMATCH[1]}"
+      OLDIFS="$IFS"; IFS=$'\t'
+      args=(${BASH_REMATCH[2]})
+      IFS="$OLDIFS"
+    fi
+
+    case "$baut_code" in
+      RDY) # Begin a test suite
+        plural "%d file" "${args[0]}"
+        plural ", %d test" "${args[1]}"
+        printf "\n"
+        test_files="${args[0]}"
+        test_total_count="${args[1]}"
+        ;;
+      STR) # Begin a test set
+        baut_report_reset_test_state
+        let test_set_test_count+="${args[2]}"
+        ((test_set_count+=1))
+        printf "#%d %s\n" "$test_set_count" "${args[1]}"
+        ;;
+      END) # End a test set
+        plural "#$ %d test" "$test_set_test_count"
+        printf ", %d ok, %d failed, %d skipped\n" \
+                 "$test_ok_count" "$test_ng_count" "$test_skip_count"
+        baut_report_sum_test_set_report
+        test_set_test_count=0
+        ;;
+      STRT) # Begin a test
+        in_test=1
+        test_name="${args[0]}"
+        test_alias_name="${args[1]:-}"
+        ;;
+      STRTDT) # Begin a todo test
+        in_test=1
+        test_name="${args[0]} # TODO ${args[1]:-}"
+        ;;
+      ENDT) # End a test
+        in_test=0
+        test_name=""
+        test_alias_name=""
+        test_deprecated=""
+        ;;
+      OK) # End a test on OK
+        baut_report_begin_color 2 ""
+        printf "o %s" "${test_alias_name:-${test_name:-${args[0]}}}"
+        [ -n "$test_deprecated" ] && printf "%s" " $test_deprecated"
+        printf "\n"
+        baut_report_flush_buffer
+        baut_report_end_color
+        ((test_ok_count+=1))
+        ;;
+      ERR) # End a test on NG
+        baut_report_begin_color 1 "" 1
+        printf "x %s" "${test_alias_name:-${test_name:-${args[0]}}}"
+        [ -n "$test_deprecated" ] && printf "%s" " $test_deprecated"
+        printf "\n"
+        baut_report_end_color
+        baut_report_begin_color 1 ""
+        baut_report_flush_buffer
+        baut_report_end_color
+        ((test_ng_count+=1))
+        ;;
+      SKP) # Skip a test
+        baut_report_begin_color 8 ""
+        printf "~ %s # SKIP %s" "${test_alias_name:-${test_name:-${args[0]}}}" "${args[1]:-}"
+        [ -n "$test_deprecated" ] && printf "%s" " $test_deprecated"
+        printf "\n"
+        baut_report_flush_buffer
+        baut_report_end_color
+        ((test_skip_count+=1))
+        ;;
+      DPR) # Deprecated test
+        test_deprecated="# DEPRECATED ${args[1]:-}"
+        ;;
+      STP) # Halt
+        baut_report_begin_color 1 ""
+        printf "Error detected in ${args[1]}(${args[2]:-})\n"
+        baut_report_end_color
+        baut_report_sum_test_set_report
+        break
+        ;;
+      TIME) # Test time
+        test_time="${args[0]}"
+        ;;
+    esac
+    continue
+  fi
+  # We buffer output in a test.
+  if [ $in_test -eq 1 ]; then
+    baut_report_buffer["${#baut_report_buffer[@]}"]="$line"
+  else
+    echo "$line"
+  fi
+done
+
+# Finally report
+printf "\n"
+if [ ${receiver_options[noColor]} -ne 1 ]; then
+  if [ $test_total_ng_count -eq 0 ]; then
+    printf "\U0001F389"
+  else
+    printf "\U0001F4A5"
+  fi
+  plural "  %d file" "$test_files"
+  plural ", %d test" "$test_total_exec_count"
+else
+  plural "%d file" "$test_files"
+  plural ", %d test" "$test_total_exec_count"
+fi
+printf ", $test_total_ok_count ok, $test_total_ng_count failed, $test_total_skip_count skipped\n"
+if [ -n "$test_time" ]; then
+  printf "Time: %s\n" "$test_time"
+fi
