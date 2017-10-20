@@ -92,7 +92,8 @@ if [ ! -e "$outdir" ]; then
 fi
 
 init_project
-exit $?
+
+exit
 
 #=begin COMMAND
 #

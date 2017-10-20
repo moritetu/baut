@@ -7,11 +7,7 @@ setup() {
 
 #: @AfterEach
 teardown() {
-  local tmpfile="${TMPDIR:-.}/$$.tmp"
-  if [ -e "$tmpfile" ]; then
-    /bin/rm "$tmpfile"
-  fi
-  :
+  /bin/rm -rf "$tmpfile" ||:
 }
 
 test_error() {

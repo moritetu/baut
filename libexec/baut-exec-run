@@ -30,7 +30,6 @@ test_end_time_sec=0
 # Test total count
 test_total_count=0
 
-run_exit_status=
 
 #: parse_options [arg ...]
 #:   Parse command line options.
@@ -66,6 +65,7 @@ parse_options() {
 find_test_targets() {
   local arg
   log_trace "==> find test targets"
+  local file_regex="^${BAUT_TEST_FILE_PREFIX}.*\.sh$"
   for arg in "${arguments[@]}"; do
     if [ -d "$arg" ]; then
       shopt -s nullglob
@@ -80,7 +80,10 @@ find_test_targets() {
       fi
       shopt -u nullglob
     else
-      test_targets[${#test_targets[@]}]="$(resolve_link "$arg")"
+      local filename="$(basename "$arg")"
+      if [[ "$filename" =~ $file_regex ]]; then
+        test_targets[${#test_targets[@]}]="$(resolve_link "$arg")"
+      fi
     fi
   done
   log_trace "test targets(${#test_targets[@]}): ${test_targets[@]}"
@@ -97,7 +100,7 @@ compile_and_count_number_of_tests() {
   log_trace "==> compile"
   for test_file in "${test_targets[@]}"; do
     file_ident="$(echo "$test_file" | "$baut_hash")"
-    compiled_filepath="$BAUT_TEMPDIR/${file_ident}.baut"
+    compiled_filepath="$BAUT_TMPDIR/${file_ident}.baut"
     log_trace "$i: $test_file => $compiled_filepath"
     baut-exec-compile "$test_file" > "$compiled_filepath"
     baut_files[${#baut_files[@]}]="$compiled_filepath"
@@ -184,11 +187,11 @@ print_test_time() {
   local hours=0 minutes=0 seconds=0
   if [ $test_total_time_sec -ge 3600 ]; then
     hours=$((test_total_time_sec / 3600))
-    let test_total_time_sec=$((test_total_time_sec - 3600 * hours))
+    test_total_time_sec=$((test_total_time_sec - 3600 * hours))
   fi
   if [ $test_total_time_sec -ge 60 ]; then
     minutes=$((test_total_time_sec / 60))
-    let test_total_time_sec=$((test_total_time_sec - 60 * minutes))
+    test_total_time_sec=$((test_total_time_sec - 60 * minutes))
   fi
   seconds="$test_total_time_sec"
 
@@ -236,7 +239,7 @@ if [ ${#arguments[@]} -eq 0 ]; then
 fi
 
 # If the directory for compilation does not exist, we make it.
-[ ! -e "$BAUT_TEMPDIR" ] && mkdir -p "$BAUT_TEMPDIR"
+[ ! -e "$BAUT_TMPDIR" ] && mkdir -p "$BAUT_TMPDIR"
 
 find_test_targets
 
@@ -245,14 +248,13 @@ if [ ${options[dryRun]} -eq 1 ]; then
   exit
 fi
 
+add_trap_callback "EXIT" "baut_cleanup_test_suite"
 compile_and_count_number_of_tests
 
 set -o pipefail
 baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_options)
-run_exit_status="$?"
-baut_cleanup_test_suite
 
-exit $run_exit_status
+exit
 
 #=begin COMMAND
 #

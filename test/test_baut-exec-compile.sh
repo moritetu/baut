@@ -7,10 +7,7 @@ setup() {
 
 #: @AfterEach
 teardown() {
-  if [ -e "$tmpfile" ]; then
-    /bin/rm "$tmpfile"
-  fi
-  :
+  /bin/rm -rf "$tmpfile" ||:
 }
 
 test_option_count_only() {

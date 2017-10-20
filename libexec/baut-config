@@ -32,9 +32,9 @@ declare -r BAUT_TEST_FILE_PREFIX=${BAUT_TEST_FILE_PREFIX:-"test_"}
 BAUT_LOAD_PATH=( "${BAUT_HELPER:-$BAUT_ROOT/helpers}" "${BAUT_LIBEXEC:-}" "$PWD/helpers"  "." )
 
 
-#:@BAUT_TEMPDIR
+#:@BAUT_TMPDIR
 #: The directory into which compiled files are output
-declare -r BAUT_TEMPDIR=${BAUT_TEMPDIR:-"${TMPDIR:-/tmp}"}
+declare -r BAUT_TMPDIR=${BAUT_TMPDIR:-"${TMPDIR:-/tmp}"}
 
 
 # show_config

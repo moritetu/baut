@@ -38,7 +38,7 @@ run_diff() {
 #:   Run the command and do diff with unified format between a result file and a expected file.
 #:   If exit status code is 0, this call is trapped.
 #: ex:
-#:   run_diff psql -c "SELECT * FROM users WHERE id = 1;"
+#:   run_diffx psql -c "SELECT * FROM users WHERE id = 1;"
 #:
 run_diffx() {
   disable_setopt "eET"

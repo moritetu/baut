@@ -57,6 +57,15 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
     baut_report_print_args "$1"
   }
 
+  #: baut_report_code_err0 <function>
+  #:   Print code ERR0. Send when process outside test failed.
+  #:
+  baut_report_code_err0() {
+    baut_report_print_code "ERR0"
+    baut_report_print_args "$1"
+  }
+
+
   #: baut_report_code_skip <function> [<message>]
   #:   Print code SKP. Send when a test skipped.
   #:
@@ -154,7 +163,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
     [format]="default"
   )
 
-  declare -r BAUT_REPORT_CODE_REGEX="^([[:alpha:]]+);(.+)$"
+  declare -r BAUT_REPORT_CODE_REGEX="^([[:alnum:]]+);(.+)$"
 
   #: baut_report_flush_buffer [<prefix>]
   #:   Flush buffer.

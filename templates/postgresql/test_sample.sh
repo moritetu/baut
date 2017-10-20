@@ -7,6 +7,7 @@ SQLDIR="$(__DIR__)/sql"
 #: @BeforeAll
 setup_all() {
   export PGDATABASE=sample
+#  export PGPORT=11003
   dropdb --if-exists sample
   createdb --encoding=utf8 sample
   psql -c "create table users (id int primary key, name varchar(128) not null);"

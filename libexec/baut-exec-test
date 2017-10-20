@@ -112,7 +112,7 @@ if [ $# -eq 0 ]; then
 fi
 
 baut_load_test "$1"
-exit "$?"
+exit
 
 #=begin COMMAND
 #

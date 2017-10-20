@@ -51,7 +51,7 @@ do
         test_alias_name=""
         ;;
       OK) # End a test on OK
-        printf "︎ok %d - %s\n" "$test_no" "${test_alias_name:-$test_name}"
+        printf "ok %d - %s\n" "$test_no" "${test_alias_name:-$test_name}"
         baut_report_flush_buffer "# "
         ((test_ok_count+=1))
         ;;
@@ -69,7 +69,7 @@ do
         # Nothing
         ;;
       STP) # Halt tests
-        printf "Bail out! %s\n" "Error detected in ${args[1]}(${args[2]:-})"
+        printf "Bail out! %s\n" "Error detected in ${args[1]}#${args[2]:-}"
         baut_report_sum_test_set_report
         exit 1
         ;;

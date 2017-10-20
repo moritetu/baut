@@ -58,10 +58,14 @@ baut_end_test() {
 #:
 baut_next_test() {
   local status="$baut_trap_exit_status"
-  if [ "$__baut_running_function" = "baut_before_all" ] \
-     || [ "$__baut_running_function" = "baut_after_all" ]; then
-    baut_report_code_err "$__baut_running_function"
+  if [ -z "$BAUT_TEST_FUNCTION_NAME" ]; then
+    if [ "$__baut_running_function" = "baut_before_all" ] \
+         || [ "$__baut_running_function" = "baut_after_all" ]; then
+      baut_report_code_err0 "$__baut_running_function"
+      exit $status
+    fi
   fi
+
   if [ $status -ne 0 ]; then
     if [ ${baut_test_options[stopOnError]} -eq 1 ]; then
       baut_report_code_stop_test "$BAUT_FILE" "$BAUT_TEST_FILE" "$BAUT_TEST_FUNCTION_NAME"
@@ -255,8 +259,8 @@ run() {
 #:
 run2() {
   local pid="$BASHPID"
-  local fd1="$BAUT_TEMPDIR/stdout.$pid.baut"
-  local fd2="$BAUT_TEMPDIR/stderr.$pid.baut"
+  local fd1="$BAUT_TMPDIR/stdout.$pid.baut"
+  local fd2="$BAUT_TMPDIR/stderr.$pid.baut"
   disable_setopt "eET"
   disable_trap "ERR"
   # run the command in subprocess
@@ -271,7 +275,7 @@ run2() {
   result="$stdout"
   lines=($stdout)
   IFS="$OLDIFS"
-  /bin/rm -rf "$BAUT_TEMPDIR"/{stdout,stderr}."$pid".baut ||:
+  /bin/rm -rf "$BAUT_TMPDIR"/{stdout,stderr}."$pid".baut ||:
   enable_trap "ERR"
   pop_setopt
 }
@@ -287,8 +291,8 @@ run2() {
 #:
 eval2() {
   local pid="$$"
-  local fd1="$BAUT_TEMPDIR/stdout.$pid.baut"
-  local fd2="$BAUT_TEMPDIR/stderr.$pid.baut"
+  local fd1="$BAUT_TMPDIR/stdout.$pid.baut"
+  local fd2="$BAUT_TMPDIR/stderr.$pid.baut"
   local OLDIFS="$IFS"
   disable_setopt "eET"
   disable_trap "ERR"
@@ -303,7 +307,7 @@ eval2() {
   stderr_lines=($stderr)
   lines=($stdout)
   IFS="$OLDIFS"
-  /bin/rm -rf "$BAUT_TEMPDIR"/{stdout,stderr}."$pid".baut ||:
+  /bin/rm -rf "$BAUT_TMPDIR"/{stdout,stderr}."$pid".baut ||:
   enable_trap "ERR"
   pop_setopt
 }
@@ -313,7 +317,7 @@ eval2() {
 #:
 baut_run_test() {
   local test_alias_name="$1"
-  declare -r __baut_running_function="$(self)"
+  __baut_running_function="$(self)"
   __baut_test_error=0
 
   baut_report_code_begin_test "${BAUT_TEST_FUNCTION_NAME}" "${test_alias_name:-}"
@@ -340,7 +344,7 @@ baut_run_test() {
 baut_run_todo_test() {
   local todo="${1:-}"
   local test_alias_name="${2:-}"
-  declare -r __baut_running_function="$(self)"
+  __baut_running_function="$(self)"
   __baut_test_error=0
 
   baut_report_code_begin_todo_test "$todo" "${BAUT_TEST_FUNCTION_NAME}" "${test_alias_name:-}"
@@ -366,7 +370,7 @@ baut_run_todo_test() {
 #:   Run before_each functions.
 #:
 baut_before_each() {
-  declare -r __baut_running_function="$(self)"
+  __baut_running_function="$(self)"
   local func_name
   _baut_enable_debug_trap
   for func_name in "${before_each_functions[@]}"; do
@@ -380,7 +384,7 @@ baut_before_each() {
 #:   Run after_each functions.
 #:
 baut_after_each() {
-  declare -r __baut_running_function="$(self)"
+  __baut_running_function="$(self)"
   local func_name
   _baut_enable_debug_trap
   for func_name in "${after_each_functions[@]}"; do
@@ -420,4 +424,5 @@ _baut_error_trap() {
   __baut_test_error="$baut_trap_exit_status"
   reset_trap_callback "ERR"
   baut_print_stack_trace "$baut_trap_exit_status"
+  exit $__baut_test_error
 }
