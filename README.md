@@ -36,6 +36,8 @@ function teardown() {
 
 ## Installation
 
+Baut runs on Bash 4 or higher.
+
 ``` shell
 $ git clone https://github.com/moritoru81/baut.git
 $ source install.sh

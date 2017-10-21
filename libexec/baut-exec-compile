@@ -109,7 +109,7 @@ define_function() {
   local func_name="$1"
   local exec_func=
   local next_index=${#test_functions[@]}
-  local tag
+  local tag="" ignore=0
   if [ ${#func_annotations[@]} -ne 0 ]; then
     for tag in "${!func_annotations[@]}"; do
       case "$tag" in
@@ -130,21 +130,22 @@ define_function() {
           return 0
           ;;
         Ignore)
-          exec_func=
+          ignore=1
           break
           ;;
         Test | Deprecated | TODO)
           exec_func="$func_name"
-          hash_set "$func_name" "$tag" "1"
-          hash_set "$func_name" "$tag" "value" "${func_annotations[$tag]}"
           ;;
         *)
           log_warn "unknown annotation: $tag"
           ;;
       esac
     done
+    [ $ignore -eq 1 ] && return
     if [ -n "$exec_func" ]; then
       test_functions[$next_index]="$func_name"
+      hash_set "$func_name" "$tag" "1"
+      hash_set "$func_name" "$tag" "value" "${func_annotations[$tag]}"
     fi
   fi
 
@@ -235,14 +236,14 @@ BEFORE
   local deprecated_value= func_alias_value= todo_value=
   for func_name in "${test_functions[@]}"; do
     echo "  # => $i: $func_name"
-    echo "  BAUT_TEST_FUNCTION_NAME='${func_name}'"
+    printf "%s" "  BAUT_TEST_FUNCTION_NAME='${func_name}';"
     deprecated="$(hash_get "$func_name" "Deprecated")"
     deprecated_value="$(hash_get "$func_name" "Deprecated" "value")"
     func_alias_value="$(hash_get "$func_name" "Test" "value")"
     todo="$(hash_get "$func_name" "TODO")"
     todo_value="$(hash_get "$func_name" "TODO" "value")"
     # We run a test function in sub-process.
-    printf "  (readonly BAUT_TEST_FUNCTION_NAME;"
+    printf "(readonly BAUT_TEST_FUNCTION_NAME;"
     if [ -n "$deprecated" ]; then
       printf "%s;" "deprecated \"$(escape_double_quot "${deprecated_value:-$func_name}")\""
     fi
