@@ -1,5 +1,7 @@
 # Baut (Bash Unit Test Tool)
 
+[![Build Status](https://travis-ci.org/moritoru81/baut.svg?branch=master)](https://travis-ci.org/moritoru81/baut)
+
 Baut is a unit testing tool runs on Bash. With baut, you can verify that the programs on Unix/Linux
 behave as expected.
 

@@ -2,5 +2,5 @@
 set -eu
 
 here="$(cd -- "$(dirname -- ${BASH_SOURCE})" && pwd -P)"
-baut run "$here"/test_*.sh
+baut run "$@" "$here"/test_*.sh
 exit $?

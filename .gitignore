@@ -1,3 +1,4 @@
 docs/_build/
 templates/postgresql/results
 templates/mysql/results
+dump.rdb

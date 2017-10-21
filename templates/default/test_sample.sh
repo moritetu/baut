@@ -16,6 +16,12 @@ test_ng_sample() {
 }
 
 #: @Test
+test_ng_sample2() {
+  run echo "bar"
+  [ $status -ne 0 ] || fail "exit status should not be 0, but '$status'"
+}
+
+#: @Test
 test_ok_sample() {
   run echo "hello baut"
   [ "$result" = "hello baut" ]

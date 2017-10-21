@@ -546,6 +546,10 @@ Disables traps of the specified signals. This function just switches on/off of t
    enable_trap "ERR"
 
 
+.. note::
+
+   DO NOT use ``ERR`` or ``EXIT`` by built-in 'trap' command in your test scripts. You can use ``add_trap_callback`` instead.
+
 Others
 ------
 
