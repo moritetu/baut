@@ -632,7 +632,6 @@ _baut_invoke_trap_callback() {
   fi
 
   local size="$(hash_get "trap_$signame")"
-  local callback_exit_status=0
   if [ -z "$size" ]; then
     return $baut_trap_exit_status
   fi

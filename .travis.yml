@@ -1,2 +1,2 @@
 language: bash
-script: ./bin/baut run test
+script: ./bin/baut run --no-debug test

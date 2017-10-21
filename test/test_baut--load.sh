@@ -303,7 +303,7 @@ test_add_trap_callback() {
   unregister_trap_callback "USR1"
 }
 
-#: @Ignore
+
 test_add_trap_commands() {
   add_trap_commands "USR1" "echo hello > $tmpfile"
   register_trap_callback "USR1"

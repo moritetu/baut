@@ -58,3 +58,7 @@ $ baut run test_sample.sh test_dir
 ## For more detail
 
 See [Baut Documentation](http://baut.readthedocs.io/en/latest/)
+
+## License
+
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)

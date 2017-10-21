@@ -18,7 +18,7 @@ test_ng_sample() {
 #: @Test
 test_ng_sample2() {
   run echo "bar"
-  [ $status -ne 0 ] || fail "exit status should not be 0, but '$status'"
+  [ $status -ne 0 ] || fail "exit status should not be 0, but '$status'" "result: $result"
 }
 
 #: @Test

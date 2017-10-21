@@ -134,7 +134,7 @@ done
 printf "\n"
 if [ $test_total_exec_count -ne $test_total_count ]; then
   baut_report_begin_color 1 "" 1
-  printf "%s\n" "# WARNING All planned tests were not executed"
+  printf "%s\n" "# WARNING planned tests were not executed absolutely!"
   baut_report_end_color
 fi
 if [ ${receiver_options[noColor]} -ne 1 ]; then
