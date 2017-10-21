@@ -176,6 +176,7 @@ output_all() {
 output_header() {
   local shbang="${output_buffer[0]}"
   local checksum="$(cat "$source_file" | "$baut_hash")"
+  checksum="${checksum%% *}"
   if [[ $shbang =~ ^#!.* ]]; then
     echo "$shbang"
     unset output_buffer[0]
@@ -204,7 +205,7 @@ output_body() {
   # Load segment
   cat<<LOAD
 readonly BAUT_TEST_FILE="$test_file"
-readonly BAUT_TEST_FUNCTIONS=(${test_functions[@]})
+readonly BAUT_TEST_FUNCTIONS=(${test_functions[@]:-})
 readonly BAUT_LIBEXEC=\${BAUT_LIBEXEC:-"$BAUT_LIBEXEC"}
 [ -e "\$BAUT_TEST_FILE" ] || abort "error: There is something wrong, file is not found: \$BAUT_TEST_FILE"
 source "\$BAUT_TEST_FILE" || abort "error: failed to source '\$BAUT_TEST_FILE'"
@@ -214,10 +215,10 @@ LOAD
   # Variable segment
   cat <<VARS
 baut_run_test_suit() {
-  declare -ar before_all_functions=(${before_all_functions[@]})
-  declare -ar before_each_functions=(${before_each_functions[@]})
-  declare -ar after_all_functions=(${after_all_functions[@]})
-  declare -ar after_each_functions=(${after_each_functions[@]})
+  declare -ar before_all_functions=(${before_all_functions[@]:-})
+  declare -ar before_each_functions=(${before_each_functions[@]:-})
+  declare -ar after_all_functions=(${after_all_functions[@]:-})
+  declare -ar after_each_functions=(${after_each_functions[@]:-})
   local BAUT_TEST_FUNCTION_NAME=
 VARS
 
@@ -269,11 +270,11 @@ AFTER
 #:     <label> <tab> <function> [<function> ...]
 #:
 print_test_functions() {
-  printf "before_all_functions\t%s\n" "${before_all_functions[*]}"
-  printf "before_each_functions\t%s\n" "${before_each_functions[*]}"
-  printf "test_functions\t%s\n" "${test_functions[*]}"
-  printf "after_each_functions\t%s\n" "${after_each_functions[*]}"
-  printf "after_all_functions\t%s\n" "${after_all_functions[*]}"
+  printf "before_all_functions\t%s\n" "${before_all_functions[*]:-}"
+  printf "before_each_functions\t%s\n" "${before_each_functions[*]:-}"
+  printf "test_functions\t%s\n" "${test_functions[*]:-}"
+  printf "after_each_functions\t%s\n" "${after_each_functions[*]:-}"
+  printf "after_all_functions\t%s\n" "${after_all_functions[*]:-}"
 }
 
 #: print_test_count

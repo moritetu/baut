@@ -35,7 +35,7 @@ baut_validate_checksum() {
   if [ ! -e "$test_file" ]; then
     abort "error: $(self): invalid compiled source: $baut_file, $test_file"
   fi
-  local checksum="$(cat "$test_file" | "$baut_hash")"
+  local checksum="$(cat "$test_file" | "$baut_hash" | awk -F" " '{print $1}')"
   log_trace "checksum: compiled=$baut_file_checksum, calculated=$checksum"
   if [ "$checksum" != "$baut_file_checksum" ]; then
     # The test_file may be changed from compilation.

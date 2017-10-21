@@ -60,7 +60,7 @@ test_compile() {
 #  echo "hoge"
 #}
 EOF
-  local checksum="$(cat "$tmpfile" | $baut_hash)"
+  local checksum="$(cat "$tmpfile" | $baut_hash | awk -F" " '{print $1}')"
   run baut compile "$tmpfile"
   [[ "$result" =~ "test_hoge" ]]
   [[ "$result" =~ "@filepath" ]]

@@ -11,10 +11,12 @@ load "baut--test-report" "reporter"
 baut_before_all() {
   __baut_running_function="$(self)"
   local func_name
-  for func_name in "${before_all_functions[@]}"; do
-    "$func_name"
-    IFS="$__baut_old_IFS"
-  done
+  if [ ${#before_all_functions[@]} -gt 0 ]; then
+    for func_name in "${before_all_functions[@]}"; do
+      "$func_name"
+      IFS="$__baut_old_IFS"
+    done
+  fi
 }
 
 #: baut_after_all
@@ -23,10 +25,12 @@ baut_before_all() {
 baut_after_all() {
   __baut_running_function="$(self)"
   local func_name
-  for func_name in "${after_all_functions[@]}"; do
-    "$func_name"
-    IFS="$__baut_old_IFS"
-  done
+  if [ ${#after_all_functions[@]} -gt 0 ]; then
+    for func_name in "${after_all_functions[@]:-}"; do
+      "$func_name"
+      IFS="$__baut_old_IFS"
+    done
+  fi
 }
 
 #: baut_start_test <test-start-function>
@@ -372,12 +376,14 @@ baut_run_todo_test() {
 baut_before_each() {
   __baut_running_function="$(self)"
   local func_name
-  _baut_enable_debug_trap
-  for func_name in "${before_each_functions[@]}"; do
-    "$func_name"
-    IFS="$__baut_old_IFS"
-  done
-  _baut_disable_debug_trap
+  if [ ${#before_each_functions[@]} -gt 0 ]; then
+    _baut_enable_debug_trap
+    for func_name in "${before_each_functions[@]:-}"; do
+      "$func_name"
+      IFS="$__baut_old_IFS"
+    done
+    _baut_disable_debug_trap
+  fi
 }
 
 #: baut_after_each
@@ -386,12 +392,14 @@ baut_before_each() {
 baut_after_each() {
   __baut_running_function="$(self)"
   local func_name
-  _baut_enable_debug_trap
-  for func_name in "${after_each_functions[@]}"; do
-    "$func_name"
-    IFS="$__baut_old_IFS"
-  done
-  _baut_disable_debug_trap
+  if [ ${#after_each_functions[@]} -gt 0 ]; then
+    _baut_enable_debug_trap
+    for func_name in "${after_each_functions[@]:-}"; do
+      "$func_name"
+      IFS="$__baut_old_IFS"
+    done
+    _baut_disable_debug_trap
+  fi
 }
 
 #: _baut_exit_trap <status>

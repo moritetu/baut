@@ -3,7 +3,6 @@
 local line=
 local baut_code=
 local args=
-local in_test=0
 
 local test_files=0
 local test_total_count=0
@@ -41,6 +40,18 @@ do
         printf "#%d %s\n" "$test_set_count" "${args[1]}"
         ;;
       END) # End a test set
+        if [ -n "$test_name" ]; then
+          baut_report_begin_color 1 "" 1
+          printf "x %s" "${test_alias_name:-${test_name:-${args[0]}}}"
+          [ -n "$test_deprecated" ] && printf "%s" " $test_deprecated"
+          printf "\n"
+          baut_report_end_color
+          baut_report_begin_color 1 ""
+          baut_report_flush_buffer
+          baut_report_end_color
+          ((test_ng_count+=1))
+        fi
+        baut_report_flush_buffer
         plural "#$ %d test" "$test_set_test_count"
         printf ", %d ok, %d failed, %d skipped\n" \
                  "$test_ok_count" "$test_ng_count" "$test_skip_count"
@@ -54,16 +65,14 @@ do
         baut_report_end_color
         ;;
       STRT) # Begin a test
-        in_test=1
         test_name="${args[0]}"
         test_alias_name="${args[1]:-}"
         ;;
       STRTDT) # Begin a todo test
-        in_test=1
         test_name="${args[0]} # TODO ${args[1]:-}"
         ;;
       ENDT) # End a test
-        in_test=0
+        baut_report_flush_buffer
         test_name=""
         test_alias_name=""
         test_deprecated=""
@@ -114,7 +123,7 @@ do
     continue
   fi
   # We buffer output in a test.
-  if [ $in_test -eq 1 ]; then
+  if [ -n "$test_name" ]; then
     baut_report_buffer["${#baut_report_buffer[@]}"]="$line"
   else
     echo "$line"
@@ -123,6 +132,11 @@ done
 
 # Finally report
 printf "\n"
+if [ $test_total_exec_count -ne $test_total_count ]; then
+  baut_report_begin_color 1 "" 1
+  printf "%s\n" "# WARNING All planned tests were not executed"
+  baut_report_end_color
+fi
 if [ ${receiver_options[noColor]} -ne 1 ]; then
   if [ $test_total_ng_count -eq 0 ]; then
     printf "\U0001F389"

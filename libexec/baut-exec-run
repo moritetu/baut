@@ -80,13 +80,18 @@ find_test_targets() {
       fi
       shopt -u nullglob
     else
+      if [ ! -e "$arg" ]; then
+        abort "error: $(self): file does not exist: $arg"
+      fi
       local filename="$(basename "$arg")"
       if [[ "$filename" =~ $file_regex ]]; then
         test_targets[${#test_targets[@]}]="$(resolve_link "$arg")"
+      else
+        abort "error: $(self): test file is invalid: $arg"
       fi
     fi
   done
-  log_trace "test targets(${#test_targets[@]}): ${test_targets[@]}"
+  log_trace "test targets(${#test_targets[@]}): ${test_targets[@]:-}"
 }
 
 #: compile_and_count_number_of_tests
@@ -99,7 +104,7 @@ compile_and_count_number_of_tests() {
   local i=1
   log_trace "==> compile"
   for test_file in "${test_targets[@]}"; do
-    file_ident="$(echo "$test_file" | "$baut_hash")"
+    file_ident="$(echo "$test_file" | "$baut_hash" | awk -F" " '{print $1'})"
     compiled_filepath="$BAUT_TMPDIR/${file_ident}.baut"
     log_trace "$i: $test_file => $compiled_filepath"
     baut-exec-compile "$test_file" > "$compiled_filepath"
@@ -167,7 +172,7 @@ dry_run() {
       else
         printf " ├─ "
       fi
-      printf " (%d) %s => %s\n" "${#funcs[@]}" "$label" "${funcs[*]}"
+      printf " (%d) %s => %s\n" "${#funcs[@]}" "$label" "${funcs[*]:-}"
       if [ "$label" = "test_functions" ]; then
         ((test_num+=${#funcs[@]}))
       fi
@@ -242,6 +247,10 @@ fi
 [ ! -e "$BAUT_TMPDIR" ] && mkdir -p "$BAUT_TMPDIR"
 
 find_test_targets
+if [ ${#test_targets[@]} -eq 0 ]; then
+  echo "Nothing to do"
+  exit
+fi
 
 if [ ${options[dryRun]} -eq 1 ]; then
   dry_run
@@ -254,7 +263,6 @@ compile_and_count_number_of_tests
 set -o pipefail
 baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_options)
 
-exit
 
 #=begin COMMAND
 #

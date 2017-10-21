@@ -136,8 +136,8 @@ test_run_invalid_test_file() {
 #}
 EOF
   run baut run "$not_test_file"
-  [[ "${lines[0]}" =~ "0 file" ]]
-  [ $status -eq 0 ]
+  [[ "${lines[0]}" =~ "test file is invalid" ]]
+  [ $status -eq 1 ]
 
   cat <<EOF | sed -e "s/^#//g" > "$not_test_file2"
 #test_hoge() {
@@ -145,8 +145,8 @@ EOF
 #}
 EOF
   run baut run "$not_test_file2"
-  [[ "${lines[0]}" =~ "0 file" ]]
-  [ $status -eq 0 ]
+  [[ "${lines[0]}" =~ "test file is invalid" ]]
+  [ $status -eq 1 ]
 }
 
 

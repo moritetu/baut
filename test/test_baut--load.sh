@@ -304,12 +304,12 @@ test_add_trap_callback() {
 }
 
 test_add_trap_commands() {
-  add_trap_commands "USR1" "echo 1 > $tmpfile"
+  add_trap_commands "USR1" "echo hello > $tmpfile"
   register_trap_callback "USR1"
   kill -SIGUSR1 $BASHPID
-  [ -e "$tmpfile" ]
-  [ "$(cat "$tmpfile")" = "1" ]
   unregister_trap_callback "USR1"
+  [ -e "$tmpfile" ]
+  [ "$(cat "$tmpfile")" = "hello" ]
 }
 
 test_add_reset_trap_callback() {

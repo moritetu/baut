@@ -171,10 +171,12 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
   baut_report_flush_buffer() {
     local prefix="${1:-  }"
     local line
-    for line in "${baut_report_buffer[@]}"; do
-      printf "%s%s\n" "$prefix" "$line"
-    done
-    baut_report_buffer=()
+    if [ ${#baut_report_buffer[@]} -gt 0 ]; then
+      for line in "${baut_report_buffer[@]}"; do
+        printf "%s%s\n" "$prefix" "$line"
+      done
+      baut_report_buffer=()
+    fi
   }
 
   #: baut_report_begin_color 3<foreground_color> 4<background_color> <attribute>
@@ -186,10 +188,13 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
     local background_color="${2:-}"
     local attribute="${3:-}"
     local colorset=()
-    [ -n "$foreground_color" ] && colorset[${colorset[@]}]="3$foreground_color"
-    [ -n "$background_color" ] && colorset[${colorset[@]}]="4$background_color"
-    [ -n "$attribute" ] && colorset[${colorset[@]}]="$attribute"
-    baut_report_color="$(IFS=";" ; echo "${colorset[*]}")"
+    [ -n "$foreground_color" ] && colorset[${colorset[@]:-0}]="3$foreground_color"
+    [ -n "$background_color" ] && colorset[${colorset[@]:-0}]="4$background_color"
+    [ -n "$attribute" ] && colorset[${colorset[@]:-0}]="$attribute"
+    baut_report_color=""
+    if [ ${#colorset[@]} -gt 0 ]; then
+      baut_report_color="$(IFS=";" ; echo "${colorset[*]}")"
+    fi
     printf "\033[${baut_report_color}m"
   }
 
@@ -240,6 +245,10 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
     # Format stream
     local formatter="baut--test-report-${receiver_options[format]}"
     load_if_exists "$formatter" || abort "error: $(self): invalid format: ${receiver_options[format]}"
+    if [ $test_total_ng_count -gt 0 ]; then
+      exit 1
+    fi
+    exit 0
   }
 fi
 

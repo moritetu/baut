@@ -493,10 +493,14 @@ plural() {
 declare -A __baut_hashmap=()
 
 # We ordinally use md5.
-baut_hash="$(which md5sum md5 openssl | head -1)"
-if [[ "$baut_hash" =~ openssl ]]; then
-  baut_hash="$baut_hash md5"
-fi
+for baut_hash in md5sum md5 openssl; do
+  if type $baut_hash &>/dev/null; then
+    if [ "$baut_hash" = openssl ]; then
+      baut_hash="$baut_hash md5"
+    fi
+    break
+  fi
+done
 
 if [ -z "$baut_hash" ]; then
   #: hexadecimal_key [string ...]
