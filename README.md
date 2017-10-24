@@ -11,14 +11,17 @@ or editor modes.
 This is a short example of a Baut test script.
 
 ``` shell
+# test_sample.sh
+
 #: @BeforeEach
 function setup() {
+  echo "==> $(self)"
   export PATH=/usr/local/bin:"$PATH"
 }
 
 #: @Test(The usage should be displayed when command line options are invalid)
 function parse_cli_options() {
-  run ./my.sh
+  run echo "usage: baut"
   [[ "$result" =~ usage: ]]
 }
 
@@ -30,7 +33,7 @@ function this_test_is_ignored() {
 
 #: @AfterEach
 function teardown() {
-  echo "clean up a test."
+  echo "==> $(self)"
 }
 ```
 
@@ -51,7 +54,16 @@ $ source install.sh
 You can run tests with `run` command. `run` command takes test files or directories which include test files.
 
 ``` shell
-$ baut run test_sample.sh test_dir
+$ baut run test_sample.sh
+1 file, 1 test
+#1 /Users/guest/test_sample.sh
+o The usage should be displayed when command line options are invalid
+  ==> setup
+  ==> teardown
+#$ 1 test, 1 ok, 0 failed, 0 skipped
+
+🎉  1 file, 1 test, 1 ok, 0 failed, 0 skipped
+Time: 0 hour, 0 minute, 0 second
 ```
 
 
