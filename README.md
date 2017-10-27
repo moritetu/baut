@@ -43,7 +43,9 @@ Baut runs on Bash 4 or higher.
 
 ``` shell
 $ git clone https://github.com/moritoru81/baut.git
+$ cd baut
 $ source install.sh
+$ baut run test
 ```
 
 `source install.sh` is a optional step, it adds the directory path of `baut` to `PATH`.
@@ -66,6 +68,39 @@ o The usage should be displayed when command line options are invalid
 Time: 0 hour, 0 minute, 0 second
 ```
 
+## Quick Start
+
+You can make a test project with `init` command. There are some project templates under template directory. Without options, the default template is selected.
+
+``` shell
+$ baut init test
+$ ./test/run-test.sh
+1 file, 4 tests
+#1 /Users/guest/baut/test/test_sample.sh
+x test_ng_sample
+  Not implemented
+  # Error(1) detected at the following:
+  #       13	#: @Test
+  #       14	test_ng_sample() {
+  #=>     15	  fail "Not implemented"
+  #       16	}
+  #       17
+x test_ng_sample2
+  exit status should not be 0, but '0'
+  result: bar
+  # Error(1) detected at the following:
+  #       19	test_ng_sample2() {
+  #       20	  run echo "bar"
+  #=>     21	  [ $status -ne 0 ] || fail "exit status should not be 0, but '$status'" "result: $result"
+  #       22	}
+  #       23
+o test_ok_sample
+~ test_skip_sample # SKIP Good bye!
+#$ 4 tests, 1 ok, 2 failed, 1 skipped
+
+💥  1 file, 4 tests, 1 ok, 2 failed, 1 skipped
+Time: 0 hour, 0 minute, 0 second
+```
 
 ## For more detail
 

@@ -600,7 +600,7 @@ add_trap_callback() {
   local last_index="$(hash_get "trap_$signame")"
   [ -z "$last_index" ] && last_index=0
   ((last_index+=1))
-  hash_set "trap_$signame" "$((last_index))" "$trap_command"
+  hash_set "trap_$signame" "$last_index" "$trap_command"
   hash_set "trap_${signame}" "$last_index"
   __baut_enable_trap["$signame"]=1
 }
