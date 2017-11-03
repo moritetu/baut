@@ -102,9 +102,100 @@ o test_ok_sample
 Time: 0 hour, 0 minute, 0 second
 ```
 
+## Test Using Diff
+
+This example shows test comparing expected results with actual results like PostgreSQL regression test. Expected results are put under `expected` directory, and actual results are written under `results` directory.
+
+``` shell
+$ tree
+.
+├── expected
+│   ├── test_count.out
+│   ├── test_from_file.out
+│   ├── test_limit.out
+│   ├── test_offset.out
+│   └── test_where.out
+├── results
+├── sql
+│   └── test.sql
+└── test_sample.sh
+```
+
+``` shell
+#!/usr/bin/env bash
+# test_sample.sh
+
+load "diff-helper.sh"
+
+SQLDIR="$(__DIR__)/sql"
+
+#: @BeforeAll
+setup_all() {
+  export PGDATABASE=sample
+  dropdb --if-exists sample
+  createdb --encoding=utf8 sample
+  psql -c "create table users (id int primary key, name varchar(128) not null);"
+  psql -c "insert into users select i , 'name-' || i from generate_series(1, 100) as i;"
+}
+
+test_where() {
+  run_diffx psql -c "select id, name from users where id = 1;"
+}
+
+test_count() {
+  run_diffx psql -c "select count(*) from users;"
+}
+
+test_limit() {
+  run_diffx psql -c "select id, name from users order by id limit 10;"
+}
+
+test_offset() {
+  run_diffx psql -c "select id, name from users order by id limit 10 offset 50;"
+}
+
+test_from_file() {
+  run_diffx psql -f "$SQLDIR"/test.sql
+}
+
+#: @AfterAll
+after_all() {
+  dropdb sample
+}
+```
+
+``` shell
+$ cat expected/test_count.out
+ count
+-------
+   100
+(1 row)
+
+```
+
+The execution result is as follows.
+
+``` shell
+$ baut run test_sample.sh
+1 file, 5 tests
+#1 /Users/guest/workspace/baut/postgres/test_sample.sh
+NOTICE:  database "sample" does not exist, skipping
+CREATE TABLE
+INSERT 0 100
+o test_where
+o test_count
+o test_limit
+o test_offset
+o test_from_file
+#$ 5 tests, 5 ok, 0 failed, 0 skipped
+
+🎉  1 file, 5 tests, 5 ok, 0 failed, 0 skipped
+Time: 0 hour, 0 minute, 0 second
+```
+
 ## For more detail
 
-See [Baut Documentation](http://baut.readthedocs.io/en/latest/)
+See [Baut Document](http://baut.readthedocs.io/en/latest/)
 
 ## License
 
