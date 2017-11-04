@@ -70,3 +70,4 @@ OK, we run tests.
    Writing Tests <WritingTests>
    Running Tests <RunningTests>
    Customization
+   Sample Templates <SampleTemplates>
