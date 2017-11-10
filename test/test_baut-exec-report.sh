@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 
-#: @BeforeEach
-setup() {
-  :
-}
-
-#: @AfterEach
-teardown() {
-  :
-}
-
 test_exec_report_RDY() {
   code="#:RDY;1\t2"
   eval2 "printf '%b\n' '$code' | baut report -f tap"

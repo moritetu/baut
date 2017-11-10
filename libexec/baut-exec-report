@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+source "$BAUT_LIBEXEC"/baut--load
+require "baut--test-report" "receiver" "$@"
+
+#=begin COMMAND
+#
+# report     Format the result of 'baut test' execution.
+#
+#=end COMMAND
+
+#=begin HELP
+#
+# Usage: baut test <baut_file> | baut report [--no-color] [--format [cat|default|tap|oneline]]
+#
+# Format the result of 'baut test' execution.
+#
+# OPTIONS
+#   --no-color
+#     Disable coloring.
+#
+#   --format
+#     Format a stream.
+#
+#
+#=end HELP
