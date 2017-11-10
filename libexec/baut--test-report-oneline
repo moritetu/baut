@@ -117,7 +117,7 @@ done
 
 # Finally report
 printf "\n"
-if [ $test_total_exec_count -ne $test_total_count ]; then
+if [ $test_total_exec_count -ne $test_total_count ] || [ $test_files -ne $test_set_count ]; then
   baut_report_begin_color 1 "" 1
   printf "%s\n" "# WARNING planned tests were not executed absolutely!"
   baut_report_end_color
@@ -128,10 +128,10 @@ if [ ${receiver_options[noColor]} -ne 1 ]; then
   else
     printf "\U0001F4A5"
   fi
-  plural "  %d file" "$test_files"
+  plural "  %d file" "$test_set_count"
   plural ", %d test" "$test_total_exec_count"
 else
-  plural "%d file" "$test_files"
+  plural "%d file" "$test_set_count"
   plural ", %d test" "$test_total_exec_count"
 fi
 printf ", $test_total_ok_count ok, $test_total_ng_count failed, $test_total_skip_count skipped\n"

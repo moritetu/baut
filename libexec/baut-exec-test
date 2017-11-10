@@ -9,6 +9,7 @@ declare -A baut_test_options=(
   [noCheckSum]=0     # 0: check,      1: no check
   [stopOnError]=0    # 0: no stop,    1: stop
   [noDebug]=0        # 0: with debug, 1: no debug
+  [RemoveAtEnd]=0    # 0: not remove, 1: remove
 )
 
 #: baut_validate_checksum <file>
@@ -65,8 +66,22 @@ baut_load_test() {
 
   readonly BAUT_FILE="$baut_file"
 
-  add_trap_callback "EXIT" "baut_cleanup_test"
+  if [ ${baut_test_options[RemoveAtEnd]} -eq 1 ]; then
+    add_trap_callback "EXIT" "baut_cleanup_test"
+  fi
   register_trap_callback "EXIT"
+
+  if [ "$BAUT_EXEC_COMMAND" = "test" ]; then
+    load "baut--test-report" "reporter"
+    local total_test_count=0
+    while IFS= read -r line; do
+      if [[ $line =~ @testcount=([[:digit:]]+) ]]; then
+        total_test_count="${BASH_REMATCH[1]}"
+        break
+      fi
+    done < <(sed -n "/^#:@/p" "$baut_file")
+    baut_report_code_begin_all "1" "$total_test_count"
+  fi
 
   # Ok, we run a series of tests in the file!
   (
@@ -94,9 +109,10 @@ baut_cleanup_test() {
 # Parse command line options.
 while [ $# -gt 0 ]; do
   case "$1" in
-    --no-checksum)   baut_test_options[noCheckSum]=1   ;;
-    --stop-on-error) baut_test_options[stopOnError]=1  ;;
-    --no-debug)      baut_test_options[noDebug]=1      ;;
+    --no-checksum)     baut_test_options[noCheckSum]=1   ;;
+    --stop-on-error)   baut_test_options[stopOnError]=1  ;;
+    --no-debug)        baut_test_options[noDebug]=1      ;;
+    --remove-at-end)   baut_test_options[RemoveAtEnd]=1  ;;
     -*)
       abort "error: $(self): invalid option: $1"
       ;;
@@ -123,7 +139,8 @@ exit
 
 #=begin HELP
 #
-# Usage: baut test [--no-checksum] [--stop-on-error] <baut_file>
+# Usage: baut test [--no-checksum] [--stop-on-error] [--remove-at-end]
+#                  <baut_file>
 #
 # Run tests in a baut_file. <baut_file> must end with '.baut' and it is ordinally generated
 # in the process of 'run' command.
@@ -135,6 +152,9 @@ exit
 #
 #   --stop-on-error
 #     With this option, test process halts when a test failed.
+#
+#   --remove-at-end
+#     Remove a compiled test file(.baut) at the end of test.
 #
 #
 #=end HELP

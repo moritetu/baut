@@ -129,7 +129,7 @@ baut_perform_test_suite() {
   local baut_file line
   local status=0
 
-  load "baut--test-report" "reporter" "${options[noColor]}"
+  load "baut--test-report" "reporter"
   baut_report_code_begin_all "${#baut_files[@]}" "$test_total_count"
 
   test_begin_time_sec="$(date +'%s')"
@@ -232,7 +232,7 @@ build_test_options() {
   if [ "${options[noDebug]}" = "1" ]; then
     opts+=" --no-debug"
   fi
-
+  opts+=" --remove-at-end"
   echo "$opts"
 }
 

@@ -119,7 +119,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   #:
   baut_report_code_end_test() {
     baut_report_print_code "ENDT"
-    baut_report_print_args "$1"
+    baut_report_print_args "$1" "$2"
   }
 
   #: baut_report_code_begin_all <file_num> <test_count>
@@ -226,8 +226,8 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
   # Parse options
   while [ $# -gt 0 ]; do
     case "$1" in
-      --no-color)  receiver_options[noColor]=1 ;;
-      --format)
+      -p | --no-color)  receiver_options[noColor]=1 ;;
+      -f | --format)
         shift
         receiver_options[format]="$1"
         ;;
@@ -263,10 +263,10 @@ fi
 # ahead of a pipe stream.
 #
 # OPTIONS
-#   --no-color
+#   -p, --no-color
 #     Color off.
 #
-#   --format [oneline|default|tap|cat]
+#   -f, --format [oneline|default|tap|cat]
 #     Output format. 'oneline' is a simple format. Only the result and the test name are displayed.
 #
 #
