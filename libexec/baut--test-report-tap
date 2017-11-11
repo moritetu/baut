@@ -82,6 +82,7 @@ do
     baut_report_buffer["${#baut_report_buffer[@]}"]="$line"
   fi
 done
+
 if [ $test_total_exec_count -ne $test_total_count ]; then
   printf "%s\n" "# WARNING planned tests were not executed absolutely!"
 fi

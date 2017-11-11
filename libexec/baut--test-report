@@ -42,7 +42,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_ok <function>
-  #:   Print code OK. Send when a test is ok.
+  #:   Print code OK. Sent when a test is ok.
   #:
   baut_report_code_ok() {
     baut_report_print_code "OK"
@@ -50,7 +50,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_err <function>
-  #:   Print code ERR. Send when a test failed.
+  #:   Print code ERR. Sent when a test failed.
   #:
   baut_report_code_err() {
     baut_report_print_code "ERR"
@@ -58,7 +58,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_err0 <function>
-  #:   Print code ERR0. Send when process outside test failed.
+  #:   Print code ERR0. Sent when process outside test failed.
   #:
   baut_report_code_err0() {
     baut_report_print_code "ERR0"
@@ -67,7 +67,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
 
 
   #: baut_report_code_skip <function> [<message>]
-  #:   Print code SKP. Send when a test skipped.
+  #:   Print code SKP. Sent when a test skipped.
   #:
   baut_report_code_skip() {
     baut_report_print_code "SKP"
@@ -75,7 +75,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_deprecated <function> [<message>]
-  #:   Print code DPR. Send when a test is deprecated.
+  #:   Print code DPR. Sent when a test is deprecated.
   #:
   baut_report_code_deprecated() {
     baut_report_print_code "DPR"
@@ -83,7 +83,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_begin_test_set <baut_file> <test_file> <test_count>
-  #:   Print code STR. Send when a test set starts.
+  #:   Print code STR. Sent when a test set starts.
   #:
   baut_report_code_begin_test_set() {
     baut_report_print_code "STR"
@@ -91,7 +91,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_end_test_set <baut_file> <test_file>
-  #:   Print code END. Send when a test set ends.
+  #:   Print code END. Sent when a test set ends.
   #:
   baut_report_code_end_test_set() {
     baut_report_print_code "END"
@@ -99,7 +99,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_begin_test <function> [<alias_name>]
-  #:   Print code STRT. Send when a test starts.
+  #:   Print code STRT. Sent when a test starts.
   #:
   baut_report_code_begin_test() {
     baut_report_print_code "STRT"
@@ -107,7 +107,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_begin_todo_test <todo> <function> [<alias_name>]
-  #:   Print code STRTDT. Send when a todo test starts.
+  #:   Print code STRTDT. Sent when a todo test starts.
   #:
   baut_report_code_begin_todo_test() {
     baut_report_print_code "STRTDT"
@@ -115,7 +115,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_end_test <function> <status>
-  #:   Print code ENDT. Send when a test ends.
+  #:   Print code ENDT. Sent when a test ends.
   #:
   baut_report_code_end_test() {
     baut_report_print_code "ENDT"
@@ -123,7 +123,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_begin_all <file_num> <test_count>
-  #:   Print code RDY. Send at the beginning of a test suite.
+  #:   Print code RDY. Sent at the beginning of a test suite.
   #:
   baut_report_code_begin_all() {
     baut_report_print_code "RDY"
@@ -131,7 +131,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
   }
 
   #: baut_report_code_stop_test <baut_file> <test_file> [<function>]
-  #:   Print code STP. Send at the stop of tests.
+  #:   Print code STP. Sent at the stop of tests.
   #:
   baut_report_code_stop_test() {
     baut_report_print_code "STP"

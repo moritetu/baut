@@ -501,7 +501,7 @@ seq_char() {
 #: ex: printf "$(plural "%d file" 2)" => 2 files
 plural() {
   local label="$1"
-  local num="$2"
+  local num="${2:-0}"
   if [ $num -gt 1 ]; then
     label+="s"
   fi

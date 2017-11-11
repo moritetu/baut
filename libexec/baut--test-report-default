@@ -4,8 +4,8 @@ local line=
 local baut_code=
 local args=
 
-local test_files=0
-local test_total_count=0
+local test_files=
+local test_total_count=
 local test_time=
 
 local test_set_count=0
@@ -132,10 +132,12 @@ done
 
 # Finally report
 printf "\n"
-if [ $test_total_exec_count -ne $test_total_count ] || [ $test_files -ne $test_set_count ]; then
-  baut_report_begin_color 1 "" 1
-  printf "%s\n" "# WARNING planned tests were not executed absolutely!"
-  baut_report_end_color
+if [ -n "$test_files" ] || [ -n "$test_total_count" ]; then
+  if [ "$test_total_exec_count" != "${test_total_count:-}" ] || [ "$test_files" != "${test_set_count:-}" ]; then
+    baut_report_begin_color 1 "" 1
+    printf "%s\n" "# WARNING planned tests were not executed absolutely!"
+    baut_report_end_color
+  fi
 fi
 if [ ${receiver_options[noColor]} -ne 1 ]; then
   if [ $test_total_ng_count -eq 0 ]; then

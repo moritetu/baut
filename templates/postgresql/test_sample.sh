@@ -6,7 +6,12 @@ SQLDIR="$(__DIR__)/sql"
 
 #: @BeforeAll
 setup_all() {
+  export PGDATA="$(__DIR__)/pgdata"
   export PGDATABASE=sample
+  {
+    initdb --encoding=utf8 "$(__DIR__)/pgdata"
+    pg_ctl -w start
+  } &> /dev/null
 #  export PGPORT=11003
   dropdb --if-exists sample
   createdb --encoding=utf8 sample
@@ -37,4 +42,6 @@ test_from_file() {
 #: @AfterAll
 after_all() {
   dropdb sample
+  pg_ctl -w stop &> /dev/null
+  rm -rf "$PGDATA"
 }
