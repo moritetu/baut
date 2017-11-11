@@ -153,6 +153,18 @@ test_abs_dirname() {
   [ "$result" = "$absdir/$realdir" ]
 }
 
+test_push_pop_load_path() {
+  path_size="${#BAUT_LOAD_PATH[@]}"
+  first_path="${BAUT_LOAD_PATH[$((${#BAUT_LOAD_PATH[@]}-1))]}"
+  push_load_path "$(__DIR__)"
+  push_load_path "$(__DIR__)/dummy"
+  [ "${BAUT_LOAD_PATH[$((${#BAUT_LOAD_PATH[@]}-1))]}" = "$(__DIR__)/dummy" ]
+  [ "${#BAUT_LOAD_PATH[@]}" = "$(($path_size+2))" ]
+  pop_load_path 2
+  [ "$path_size" = "${#BAUT_LOAD_PATH[@]}" ]
+  [ "${BAUT_LOAD_PATH[$((${#BAUT_LOAD_PATH[@]}-1))]}" = "$first_path" ]
+}
+
 test_datetime() {
   BAUT_LOG_DATE_FORMAT='%Y'
   run datetime

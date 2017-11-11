@@ -10,6 +10,7 @@ declare -A baut_test_options=(
   [stopOnError]=0    # 0: no stop,    1: stop
   [noDebug]=0        # 0: with debug, 1: no debug
   [RemoveAtEnd]=0    # 0: not remove, 1: remove
+  [FunctionMatch]=""
 )
 
 #: baut_validate_checksum <file>
@@ -113,6 +114,10 @@ while [ $# -gt 0 ]; do
     --stop-on-error)   baut_test_options[stopOnError]=1  ;;
     --no-debug)        baut_test_options[noDebug]=1      ;;
     --remove-at-end)   baut_test_options[RemoveAtEnd]=1  ;;
+    -m | --match)
+      shift
+      baut_test_options[FunctionMatch]="$1"
+      ;;
     -*)
       abort "error: $(self): invalid option: $1"
       ;;
@@ -140,7 +145,7 @@ exit
 #=begin HELP
 #
 # Usage: baut test [--no-checksum] [--stop-on-error] [--remove-at-end]
-#                  <baut_file>
+#                  [-m | --match <regex>] <baut_file>
 #
 # Run tests in a baut_file. <baut_file> must end with '.baut' and it is ordinally generated
 # in the process of 'run' command.
@@ -155,6 +160,10 @@ exit
 #
 #   --remove-at-end
 #     Remove a compiled test file(.baut) at the end of test.
+#
+#   -m, --match <regex>
+#     Execute only functions that match <regex>.
+#     ex: -m "options"
 #
 #
 #=end HELP

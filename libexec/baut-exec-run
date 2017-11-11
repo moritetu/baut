@@ -14,6 +14,7 @@ options=(
   [noColor]=0
   [format]="default"
   [noDebug]=0
+  [FunctionMatch]=
 )
 
 # Not options arguments
@@ -47,6 +48,10 @@ parse_options() {
         shift
         loadable "baut--test-report-${1-}" || abort "error: $(self): invalid format: ${1:-}"
         options[format]="$1"
+        ;;
+      -m | --match)
+        shift
+        options[FunctionMatch]="$1"
         ;;
       -*)
         abort "error: $(self): invalid option: $1"
@@ -232,6 +237,10 @@ build_test_options() {
   if [ "${options[noDebug]}" = "1" ]; then
     opts+=" --no-debug"
   fi
+  if [ ! -z "${options[FunctionMatch]:-}" ]; then
+    opts+=" -m ${options[FunctionMatch]}"
+  fi
+
   opts+=" --remove-at-end"
   echo "$opts"
 }
@@ -274,7 +283,7 @@ baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_
 #
 # Usage: baut run [-r|--recursively] [-s|--stop-on-error] [-d|--dry-run] [--no-debug]
 #                 [--no-color] [--no-checksum] [--format [default|oneline|tap|cat]]
-#                 <test> [<test> ...]
+#                 [-m | --match <regex>] <test> [<test> ...]
 #
 # Run tests with the specified test files or directories.
 #
@@ -301,6 +310,10 @@ baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_
 #     Specify the output format. 'oneline' is a simple output format, only the result and the test name are
 #     displayed in a line. 'cat' is only for debug and it does not format output.
 #     'tap' is Test Anything Protocol format.
+#
+#   -m, --match <regex>
+#     Execute only functions that match <regex>.
+#     ex: -m "options"
 #
 #
 #=end HELP

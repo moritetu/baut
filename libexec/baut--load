@@ -269,6 +269,28 @@ abs_dirname() {
   echo "$(cd -P -- "$(dirname -- "$1")" && pwd -P)"
 }
 
+#: push_load_path <path> [<path> ...]
+#:   Add paths to BAUT_LOAD_PATH.
+#:
+push_load_path() {
+  local p=
+  for p in "$@"; do
+    BAUT_LOAD_PATH["${#BAUT_LOAD_PATH[@]}"]="$p"
+  done
+}
+
+#: pop_load_path [<num>]
+#:   Remove paths from BAUT_LOAD_PATH.
+#:
+pop_load_path() {
+  local i="${1:-1}"
+  while [ $i -gt 0 ]; do
+    if [ ${#BAUT_LOAD_PATH[@]} -gt 0 ]; then
+      unset BAUT_LOAD_PATH[$((${#BAUT_LOAD_PATH[@]}-1))]
+    fi
+    ((i=i-1,1))
+  done
+}
 
 #: Log
 
