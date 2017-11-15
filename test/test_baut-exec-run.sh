@@ -103,6 +103,23 @@ EOF
   [ 1 -eq $(printf "$result" | grep -e "^x" | wc -l) ]
 }
 
+test_run_option_match() {
+  cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
+#test_hoge() {
+#  echo "hoge"
+#}
+#test_foo() {
+#  echo "hoge"
+#}
+#test_fail() {
+#  [ 0 -eq 1 ]
+#}
+EOF
+  run baut run -m "hoge" --no-color "$tmpfile"
+  [[ "$result" =~ "1 file, 3 tests" ]]
+  [[ "$result" =~ "1 file, 1 test, 1 ok, 0 failed, 0 skipped" ]]
+}
+
 
 test_run_2_files() {
   cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
