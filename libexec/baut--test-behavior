@@ -316,6 +316,51 @@ eval2() {
   pop_setopt
 }
 
+#: wait_until [OPTIONS] <command>
+#:   Wait until the command ends successfully.
+#:
+#: OPTIONS:
+#:   --interval <interval second>
+#:     Sleep time. Default 1.
+#:   --retry-max <retry_max_count>
+#:     Retry max count. Default 10.
+#:
+#: ex: wait_until --retry-max 3 "[ -e '$pidfile' ]"
+#:
+wait_until() {
+  local i=0
+  local status=0
+  declare -A opts=([interval]=1 [retrymax]=10)
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -i|--interval)  shift; opts[interval]="$1" ;;
+      -m|--retry-max) shift; opts[retrymax]="$1" ;;
+      -*) abort "invalid option: $1" ;;
+      *)  break ;;
+    esac
+    shift
+  done
+  disable_setopt "eET"
+  disable_trap "ERR"
+  while true; do
+    (eval $(echo "$*") &> /dev/null)
+    status="$?"
+    if [ $status -ne 0 ]; then
+      let i=i+1
+      if [ $i -gt ${opts[retrymax]} ]; then
+        log_error "failed to do commands: $*"
+        break
+      fi
+      sleep ${opts[interval]}
+      continue
+    fi
+    break
+  done
+  enable_trap "ERR"
+  pop_setopt
+  return $status
+}
+
 #: _baut_run_test
 #:   Run a test.
 #:

@@ -35,6 +35,14 @@ test_skip_sample() {
   echo "Not reach here"
 }
 
+#: @Test
+test_wait_until() {
+  local pidfile="$(__DIR__)/sample.pid"
+  eval "sleep 2 && echo $BASHPID > $pidfile" &
+  wait_until --retry-max 3 "[ -e '$pidfile' ]"
+  rm $pidfile ||:
+}
+
 #: @AfterEach
 function teardown() {
   :
