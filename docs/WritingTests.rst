@@ -245,6 +245,26 @@ skip
    }
 
 
+wait_until
+----------
+
+.. code-block:: bash
+
+   wait_until [-i|--interval <sec>] [-m|--retry-max <count>] <command>
+
+Retry until the command ends successfully.
+
+.. code-block:: bash
+
+   test_wait_until() {
+     run myapp.sh start
+     wait_until --retry-max 3 "[ -e my.pid ]"
+     run myapp.sh stop
+     wait_until --retry-max 3 "[ ! -e my.pid ]"
+   }
+
+
+
 Annotations
 ===========
 
