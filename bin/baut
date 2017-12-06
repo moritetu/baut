@@ -27,6 +27,15 @@ while [ $# -gt 0 ]; do
       export BAUT_LOG_LEVEL="${1:3:1}"
       ;;
     *)
+      # Resolve command alias
+      case "$COMMAND" in
+        r) COMMAND=run ;;
+        c) COMMAND=compile ;;
+        i) COMMAND=init ;;
+        t) COMMAND=test ;;
+        R) COMMAND=report ;;
+      esac
+
       # If the command equals "help", show usage of the command.
       # baut help <command>
       if [ "$COMMAND" = "help" ]; then

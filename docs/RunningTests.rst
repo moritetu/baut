@@ -17,8 +17,8 @@ To run tests, you need to execute ``run`` command with files or directories.
 Commands
 ========
 
-run
----
+run(r)
+------
 
 You can run tests with ``run`` command, and its command takes some options.
 
@@ -51,8 +51,8 @@ Executes only functions that match the specified value.
    $ baut run -m "option" test_command.sh
 
 
-compile
--------
+compile(c)
+----------
 
 ``compile`` converts a test script into the baut test file. This command is called in ``run`` command process, so you will not need to call explicitly ``compile`` command.
 
@@ -62,8 +62,8 @@ compile
    $ baut test test_sample.baut | baut report
 
 
-report
-------
+report(R)
+---------
 
 ``report`` command receives data from the starndard input, formats the result of test.
 
