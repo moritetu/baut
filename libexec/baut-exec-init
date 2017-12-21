@@ -27,9 +27,11 @@ init_project() {
   /bin/cp -rf "$template"/* "$outdir/"
   for file in $(find "$outdir" -type f); do
     log_trace "replace place holders: $file"
-    sed -i "" -e "1,$ {
+    local bak_file="$file.bak"
+    sed -e "1,$ {
       $(make_replace_strings_rule)
-    }" "$file"
+    }" "$file" > "$bak_file"
+    mv -f "$bak_file" "$file"
   done
   if [ -e "$template/README" ] && [ ${options[silent]} -ne 1 ]; then
     cat "$template/README"
@@ -40,7 +42,7 @@ init_project() {
 #:   Prints rules that 'sed' takes.
 #:
 make_replace_strings_rule() {
-  local key value
+  local key
   for key in "${!variables[@]}"; do
     printf "%s\n" "s|%${key}%|${variables[$key]}|g"
   done
