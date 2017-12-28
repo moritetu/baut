@@ -369,9 +369,9 @@ baut_run_test() {
   __baut_running_function="$(self)"
   __baut_test_error=0
 
-  if [ -n "${baut_test_options[FunctionMatch]:-}" ]; then
-    if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[FunctionMatch]} ]]; then
-      log_trace "function name '$BAUT_TEST_FUNCTION_NAME' does not match '${baut_test_options[FunctionMatch]}', so skip."
+  if [ -n "${baut_test_options[functionMatch]:-}" ]; then
+    if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[functionMatch]} ]]; then
+      log_trace "function name '$BAUT_TEST_FUNCTION_NAME' does not match '${baut_test_options[functionMatch]}', so skip."
       return 0
     fi
   fi
@@ -403,9 +403,9 @@ baut_run_todo_test() {
   __baut_running_function="$(self)"
   __baut_test_error=0
 
-  if [ -n "${baut_test_options[FunctionMatch]:-}" ]; then
-    if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[FunctionMatch]} ]]; then
-      log_trace "function name '$BAUT_TEST_FUNCTION_NAME' does not match '${baut_test_options[FunctionMatch]}', so skip."
+  if [ -n "${baut_test_options[functionMatch]:-}" ]; then
+    if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[functionMatch]} ]]; then
+      log_trace "function name '$BAUT_TEST_FUNCTION_NAME' does not match '${baut_test_options[functionMatch]}', so skip."
       return 0
     fi
   fi

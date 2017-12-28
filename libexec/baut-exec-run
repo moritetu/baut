@@ -14,7 +14,8 @@ options=(
   [noColor]=0
   [format]="default"
   [noDebug]=0
-  [FunctionMatch]=
+  [functionMatch]=
+  [interactiveMode]=0
 )
 
 # Not options arguments
@@ -44,6 +45,7 @@ parse_options() {
       --no-checksum)         options[noCheckSum]=1     ;;
       --no-color)            options[noColor]=1        ;;
       --no-debug)            options[noDebug]=1        ;;
+      -i | --interactive)    options[interactiveMode]=1 ;;
       -f | --format)
         shift
         loadable "baut--test-report-${1-}" || abort "error: $(self): invalid format: ${1:-}"
@@ -51,7 +53,7 @@ parse_options() {
         ;;
       -m | --match)
         shift
-        options[FunctionMatch]="$1"
+        options[functionMatch]="$1"
         ;;
       -*)
         abort "error: $(self): invalid option: $1"
@@ -151,6 +153,159 @@ baut_perform_test_suite() {
   return "$status"
 } 2>&1
 
+
+#: interactive_loop
+#:   Run in interactive execution mode.
+#:
+interactive_loop() {
+  local test_file test_func
+  local file_no test_no
+  local arg1 arg2
+  local status
+  local list_file_no=
+  local rerun=
+  declare -A function_table=[]
+  declare -A file_table=[]
+  local run_options=""
+  [ ${options[noColor]} -eq 1 ] && run_options+="--no-color "
+  [ ${options[noDebug]} -eq 1 ] && run_options+="--no-debug "
+  run_options+="--no-checksum "
+  run_options+="--format ${options[format]}"
+
+  disable_setopt "e"
+  while true; do
+    file_no=0
+    test_no=0
+    for test_file in ${test_targets[@]}; do
+      if [ -z "$list_file_no" ] || [ "$file_no" = "$list_file_no" ]; then
+        print_with_color "$(printf "#%-2d %s\n" "$file_no" "$test_file")\n" "" "" 1
+      fi
+      local test_functions=( $(baut-exec-compile --show-functions "$test_file" | grep ^test_functions) )
+      unset test_functions[0]
+      for test_func in ${test_functions[@]}; do
+        if [ -z "$list_file_no" ] || [ "$file_no" = "$list_file_no" ]; then
+          printf "%3d) %s\n" "$test_no" "$test_func"
+        fi
+        function_table["$test_no"]="$test_func"
+        file_table["$test_no"]="$test_file"
+        ((test_no+=1))
+      done
+      ((file_no+=1))
+    done
+    printf "\n"
+
+    while true; do
+      local skip=0
+      local interval=0
+      local __interupted=0
+      local repeated_count=0
+      local prompt="# which tests do you run ? (q:quit|r:rerun|w:watch|l:list|h:help)\n"
+      prompt+="No(sep:,): "
+      while true; do
+        read -p "$(printf "%b" "$prompt")" -e -r arg1 arg2
+        # We may get Ctrl-D input
+        if [ $? -ne 0 ]; then
+          echo "quit"
+          exit 0
+        fi
+
+        case $arg1 in
+          "q")
+            exit 0
+            ;;
+          "l"|"list")
+            list_file_no="${arg2}"
+            break 2
+            ;;
+          "r"|"w")
+            if [ -z "$rerun" ]; then
+              echo "warning: a command executed previously was not found"
+              skip=1
+              break
+            fi
+            if [[ "$arg2" =~ ^[[:digit:]]+$ ]]; then
+              interval="${BASH_REMATCH[0]}"
+              log_trace "watch interval: $interval"
+            fi
+            break
+            ;;
+          "h"|"?")
+            echo "Command:"
+            echo "  q(quit)                Exit loop."
+            echo "  r(rerun)               Rerun previous tests."
+            echo "  w(watch) [<interval>]  Run testsa repeatedly every <interval> seconds (Default: 0)."
+            echo "  l(list) [<file_no>]    Show test functions."
+            echo "                         If <file_no> is specified, show only test functions in <file_no>."
+            echo ""
+            skip=1
+            break
+            ;;
+          *)
+            if [[ "$arg1" =~ ^[[:digit:]]([[:digit:],])*$ ]]; then
+              break
+            elif [ ${#arg1} -ne 0 ]; then
+              echo "error: invalid command"
+            fi
+            skip=1
+            break
+            ;;
+        esac
+      done
+
+      [ -z "$arg1" -o $skip -eq 1 ] && continue
+
+      if [ "$arg1" = "r" ] && [ -n "$rerun" ]; then
+        for t in ${rerun[@]}; do
+          print_with_color "==> Rerun: $t) ${function_table[$t]}\n" "" "" 1
+          baut-exec-run -m "^${function_table[$t]}\$" $run_options "${file_table[$t]}" || status=$?
+        done
+      elif [ "$arg1" = "w" ] && [ -n "$rerun" ]; then
+        trap '{ __interupted=1; break; }' SIGINT
+        while true; do
+          ((repeated_count+=1))
+          print_with_color "==> #$repeated_count $(date) (every ${interval}s)\n" "" "" 1
+          for t in ${rerun[@]}; do
+            baut-exec-run -m "^${function_table[$t]}\$" $run_options "${file_table[$t]}" || status=$?
+            printf "\n"
+          done
+          [ $__interupted -eq 1 ] && break
+          sleep $interval
+        done
+        trap 'echo "quit"; exit 0;' SIGINT
+      else
+        rerun=()
+        local t
+        log_trace "Run: $arg1" | tr -s "," ' '
+        for t in $(echo "$arg1" | tr -s "," ' '); do
+          if [ $t -ge $test_no ]; then
+            print_with_color "warning: skip $t for invalid number\n" 3 "" 1
+            continue
+          fi
+          rerun[${#rerun[@]}]="$t"
+        done
+
+        for t in ${rerun[@]}; do
+          print_with_color "==> Run: $t) ${function_table[$t]}\n" "" "" 1
+          baut-exec-run -m "^${function_table[$t]}\$" $run_options "${file_table[$t]}" || status=$?
+        done
+      fi
+      printf "\n"
+    done
+  done
+}
+
+#: print_with_color
+#:   Print text with color If noColor option is enabled.
+#:
+print_with_color() {
+  if [ ${options[noColor]} -ne 1 ]; then
+    text_color "$@"
+    return
+  fi
+  printf "%b" "$1"
+}
+
+
 #: baut_cleanup_test_suite
 #:   Clean up the current test suite.
 #:
@@ -237,8 +392,8 @@ build_test_options() {
   if [ "${options[noDebug]}" = "1" ]; then
     opts+=" --no-debug"
   fi
-  if [ ! -z "${options[FunctionMatch]:-}" ]; then
-    opts+=" -m ${options[FunctionMatch]}"
+  if [ ! -z "${options[functionMatch]:-}" ]; then
+    opts+=" -m ${options[functionMatch]}"
   fi
 
   opts+=" --remove-at-end"
@@ -267,10 +422,14 @@ if [ ${options[dryRun]} -eq 1 ]; then
 fi
 
 add_trap_callback "EXIT" "baut_cleanup_test_suite"
-compile_and_count_number_of_tests
 
-set -o pipefail
-baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_options)
+if [ ${options[interactiveMode]} -eq 1 ]; then
+  interactive_loop
+else
+  compile_and_count_number_of_tests
+  set -o pipefail
+  baut_perform_test_suite | require "baut--test-report" "receiver" $(build_report_options)
+fi
 
 
 #=begin COMMAND

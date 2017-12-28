@@ -363,6 +363,49 @@ println() {
 }
 
 
+#: Text
+
+
+__baut_text_color=""
+
+#: text_color_on 3<foreground_color> 4<background_color> <attribute>
+#:   Set color on with the specified code number.
+#:
+text_color_on() {
+  local foreground_color="${1:-}"
+  local background_color="${2:-}"
+  local attribute="${3:-}"
+  local colorset=()
+  [ -n "$foreground_color" ] && colorset[${colorset[@]:-0}]="3$foreground_color"
+  [ -n "$background_color" ] && colorset[${colorset[@]:-0}]="4$background_color"
+  [ -n "$attribute" ] && colorset[${colorset[@]:-0}]="$attribute"
+  __baut_text_color=""
+  if [ ${#colorset[@]} -gt 0 ]; then
+    __baut_text_color="$(IFS=";" ; echo "${colorset[*]}")"
+  fi
+  printf "\033[${__baut_text_color}m"
+}
+
+#: text_color_off
+#:   Set color off.
+#:
+text_color_off() {
+  __baut_text_color=
+  printf "\033[m"
+}
+
+#: text_color <msg> 3<foreground_color> 4<background_color> <attribute>
+#:   Set color on with the specified code number.
+#:
+text_color() {
+  local msg="$1"
+  shift
+  text_color_on "$@"
+  printf "$msg"
+  text_color_off
+}
+
+
 #: Comment
 
 

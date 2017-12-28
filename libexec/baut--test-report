@@ -184,18 +184,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
   #:
   baut_report_begin_color() {
     [ ${receiver_options[noColor]} -eq 1 ] && return 0
-    local foreground_color="${1:-}"
-    local background_color="${2:-}"
-    local attribute="${3:-}"
-    local colorset=()
-    [ -n "$foreground_color" ] && colorset[${colorset[@]:-0}]="3$foreground_color"
-    [ -n "$background_color" ] && colorset[${colorset[@]:-0}]="4$background_color"
-    [ -n "$attribute" ] && colorset[${colorset[@]:-0}]="$attribute"
-    baut_report_color=""
-    if [ ${#colorset[@]} -gt 0 ]; then
-      baut_report_color="$(IFS=";" ; echo "${colorset[*]}")"
-    fi
-    printf "\033[${baut_report_color}m"
+    text_color_on "$@"
   }
 
   #: baut_report_end_color
@@ -203,8 +192,7 @@ if [ "$BAUT_REPORT_CONTEXT" = "receiver" ]; then
   #:
   baut_report_end_color() {
     [ ${receiver_options[noColor]} -eq 1 ] && return 0
-    __baut_report_color=
-    printf "\033[m"
+    text_color_off "$@"
   }
 
   #: baut_report_reset_test_state

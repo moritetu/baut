@@ -316,6 +316,9 @@ while [ $# -gt 0 ]; do
       if [ ! -e "$1" ]; then
         abort "error: $(self): file does not exist: $1"
       fi
+      if [ -d "$1" ]; then
+        abort "error: '$1' is not a file"
+      fi
       source_file="$1"
       break
       ;;

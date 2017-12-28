@@ -10,7 +10,7 @@ declare -A baut_test_options=(
   [stopOnError]=0    # 0: no stop,    1: stop
   [noDebug]=0        # 0: with debug, 1: no debug
   [RemoveAtEnd]=0    # 0: not remove, 1: remove
-  [FunctionMatch]=""
+  [functionMatch]=""
 )
 
 #: baut_validate_checksum <file>
@@ -52,6 +52,10 @@ baut_load_test() {
   local baut_file="$1"
   local status=0
   local extension="${baut_file##*.}"
+
+  if [ -d "$baut_file" ]; then
+    abort "error: '$baut_file' is not a file"
+  fi
 
   if [ "$extension" != "baut" ]; then
     abort "error: $(self): the file must end with '.baut', but the file is '$baut_file'"
@@ -116,7 +120,7 @@ while [ $# -gt 0 ]; do
     --remove-at-end)   baut_test_options[RemoveAtEnd]=1  ;;
     -m | --match)
       shift
-      baut_test_options[FunctionMatch]="$1"
+      baut_test_options[functionMatch]="$1"
       ;;
     -*)
       abort "error: $(self): invalid option: $1"

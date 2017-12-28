@@ -17,7 +17,7 @@
 #: Log format of log output, this string is evaluated by eval command.
 #: Ensure that malicious codes are not included.
 #:   ex: log_debug "debug" ==> 2017-09-01 12:12:00 [DEBUG] sourcename:lineno - debug
-: ${BAUT_LOG_FORMAT:='$(basename "${BASH_SOURCE[1]}"):${BASH_LINENO[0]} - $@'}
+: ${BAUT_LOG_FORMAT:='$(basename -- "${BASH_SOURCE[1]}"):${BASH_LINENO[0]} - $@'}
 
 
 #:@BAUT_TEST_FILE_PREFIX

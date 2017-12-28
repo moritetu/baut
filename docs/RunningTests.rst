@@ -50,6 +50,10 @@ Executes only functions that match the specified value.
 
    $ baut run -m "option" test_command.sh
 
+``-i, --interactive``
+
+Run tests in interactive mode.
+
 
 compile(c)
 ----------

@@ -209,6 +209,23 @@ test_println() {
   [[ "${lines[1]}" =~ bar ]]
 }
 
+test_text_color_on() {
+  run text_color_on 2 ""
+  [ "$result" = "$(printf "\033[32m")" ]
+  run text_color_off
+}
+
+test_text_color_off() {
+  run text_color_off
+  [ "$result" = "$(printf "\033[m")" ]
+}
+
+test_text_color() {
+  run text_color "hoge" 2 ""
+  [ "$result" = "$(printf "\033[32mhoge\033[m")" ]
+  run text_color_off
+}
+
 test_get_comment_block() {
   cat <<EOF > "$tmpfile"
 #
