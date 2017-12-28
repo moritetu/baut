@@ -170,7 +170,7 @@ interactive_loop() {
   [ ${options[noColor]} -eq 1 ] && run_options+="--no-color "
   [ ${options[noDebug]} -eq 1 ] && run_options+="--no-debug "
   run_options+="--no-checksum "
-  run_options+="--format ${options[format]}"
+  run_options+="--format ${options[format]} "
 
   disable_setopt "e"
   while true; do
@@ -200,7 +200,7 @@ interactive_loop() {
       local __interupted=0
       local repeated_count=0
       local prompt="# which tests do you run ? (q:quit|r:rerun|w:watch|l:list|h:help)\n"
-      prompt+="No(sep:,): "
+      prompt+="No: "
       while true; do
         read -p "$(printf "%b" "$prompt")" -e -r arg1 arg2
         # We may get Ctrl-D input
@@ -236,17 +236,25 @@ interactive_loop() {
             echo "  w(watch) [<interval>]  Run testsa repeatedly every <interval> seconds (Default: 0)."
             echo "  l(list) [<file_no>]    Show test functions."
             echo "                         If <file_no> is specified, show only test functions in <file_no>."
-            echo ""
+            echo "  No                     Shell brace expansion is available"
+            echo "                         ex) {1..2} => 1 2"
+            echo
             skip=1
             break
             ;;
           *)
-            if [[ "$arg1" =~ ^[[:digit:]]([[:digit:],])*$ ]]; then
-              break
-            elif [ ${#arg1} -ne 0 ]; then
-              echo "error: invalid command"
+            # ex) 1..3  1,3,4
+            if [[ "$arg1" =~ ^[0-9]+\.\.[0-9]+(\.\.[0-9]+)?$ ]] || [[ "$arg1" =~ ^[0-9]+(,[0-9]+)+$ ]]; then
+              arg1="$(eval "echo {$arg1}")"
+            # ex) 1{1,2,3}
+            elif [[ "$arg1" =~ ^({|[0-9])[,{}0-9]+$ ]] || [[ "$arg1" =~ ^\{[0-9]+\.\.[0-9]+(\.\.[0-9]+)?\}$ ]]; then
+              arg1="$(eval "echo $arg1")"
             fi
-            skip=1
+            log_trace "expanded: $arg1"
+            if  [[ ! "$arg1" =~ ^[0-9](([0-9]| )+)?$ ]]; then
+              echo "error: invalid command"
+              skip=1
+            fi
             break
             ;;
         esac
@@ -275,8 +283,7 @@ interactive_loop() {
       else
         rerun=()
         local t
-        log_trace "Run: $arg1" | tr -s "," ' '
-        for t in $(echo "$arg1" | tr -s "," ' '); do
+        for t in $arg1; do
           if [ $t -ge $test_no ]; then
             print_with_color "warning: skip $t for invalid number\n" 3 "" 1
             continue
@@ -442,7 +449,8 @@ fi
 #
 # Usage: baut run [-r|--recursively] [-s|--stop-on-error] [-d|--dry-run] [--no-debug]
 #                 [--no-color] [--no-checksum] [--format [default|oneline|tap|cat]]
-#                 [-m | --match <regex>] <test> [<test> ...]
+#                 [-m | --match <regex>] [-i | --interactive]
+#                 <test> [<test> ...]
 #
 # Run tests with the specified test files or directories.
 #
@@ -473,6 +481,9 @@ fi
 #   -m, --match <regex>
 #     Execute only functions that match <regex>.
 #     ex: -m "options"
+#
+#   -i, --interactive
+#     Run tests in interactive mode.
 #
 #
 #=end HELP
