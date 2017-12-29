@@ -251,7 +251,7 @@ interactive_loop() {
               arg1="$(eval "echo $arg1")"
             fi
             log_trace "expanded: $arg1"
-            if  [[ ! "$arg1" =~ ^[0-9](([0-9]| )+)?$ ]]; then
+            if [ -n "$arg1" ] && [[ ! "$arg1" =~ ^[0-9](([0-9]| )+)?$ ]]; then
               echo "error: invalid command"
               skip=1
             fi
