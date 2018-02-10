@@ -16,6 +16,7 @@ options=(
   [noDebug]=0
   [functionMatch]=
   [interactiveMode]=0
+  [wrapScript]="_all.sh"
 )
 
 # Not options arguments
@@ -54,6 +55,11 @@ parse_options() {
       -m | --match)
         shift
         options[functionMatch]="$1"
+        ;;
+      -w | --wrap-script)
+        shift
+        [ ! -f "$1" ] && abort "error: file does not exist: $1"
+        options[wrapScript]="$1"
         ;;
       -*)
         abort "error: $(self): invalid option: $1"
@@ -139,6 +145,18 @@ baut_perform_test_suite() {
   load "baut--test-report" "reporter"
   baut_report_code_begin_all "${#baut_files[@]}" "$test_total_count"
 
+  # If pre-process over all test exists, run it.
+  if [ -f "${options[wrapScript]}" ]; then
+    source "${options[wrapScript]}"
+    if type "_setup" &> /dev/null
+    then
+       _setup || status=$?
+       if [ $status -ne 0 ]; then
+         abort "error: failed to execute _setup in ${options[wrapScript]}"
+       fi
+    fi
+  fi
+
   test_begin_time_sec="$(date +'%s')"
   for baut_file in "${baut_files[@]}"; do
     log_trace "==> execute tests: $baut_file"
@@ -149,6 +167,16 @@ baut_perform_test_suite() {
     fi
   done
   test_end_time_sec="$(date +'%s')"
+
+  # If after-process over all test exists, run it.
+  if type "_cleanup" &> /dev/null
+  then
+     _cleanup || status=$?
+     if [ $status -ne 0 ]; then
+       error "warn: failed to execute _cleanup in ${options[wrapScript]}"
+     fi
+  fi
+
   print_test_time
   return "$status"
 } 2>&1
