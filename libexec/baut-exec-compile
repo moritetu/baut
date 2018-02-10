@@ -242,10 +242,12 @@ baut_run_test_suit() {
 VARS
 
   # Include
-  local inc=
-  for inc in "${include_files[@]}"; do
-    printf '  source "%s" || abort "error: failed to include %s in %s"\n' "$inc" "'$inc'" "'$source_file'"
-  done
+  if [ ${#include_files[@]} -gt 0 ]; then
+    local inc=
+    for inc in "${include_files[@]}"; do
+      printf '  source "%s" || abort "error: failed to include %s in %s"\n' "$inc" "'$inc'" "'$source_file'"
+    done
+  fi
 
   # Before segment
   cat<<BEFORE
