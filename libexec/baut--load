@@ -79,7 +79,7 @@ self() {
   else
     if [ "${1:-}" = "-v" ]; then
       echo "$(basename "${BASH_SOURCE[1]}")#${FUNCNAME[1]}"
-    elif [ "${1:-}" = "-v2" ]; then
+    elif [ "${1:-}" = "-vv" ]; then
       echo "$(basename "${BASH_SOURCE[1]}")#${FUNCNAME[1]}(${BASH_LINENO[0]})"
     else
       echo "${FUNCNAME[1]}"
@@ -99,7 +99,7 @@ declare -A __baut_loaded_path=()
 #: ex: load lib-string
 #:
 load() {
-  [ $# -eq 0 ] && abort "error: $(self -v2): <file> is required"
+  [ $# -eq 0 ] && abort "error: $(self -vv): <file> is required"
   declare -r lib="$1"
   local libpath=
   local loadpath=
@@ -107,7 +107,7 @@ load() {
   shift
   if [ "${lib:0:1}" = "/" ]; then
     if [ ! -e "$lib" ]; then
-      abort "error: $(self -v2): file not found '$lib'"
+      abort "error: $(self -vv): file not found '$lib'"
     fi
     libpath="$(resolve_link "$lib")"
   else
@@ -118,7 +118,7 @@ load() {
       fi
     done < <(array_reverse "${BAUT_LOAD_PATH[@]}")
     if [ -z "$libpath" ]; then
-      abort "error: $(self -v2): file not found '$lib', loadpath=${BAUT_LOAD_PATH[@]}"
+      abort "error: $(self -vv): file not found '$lib', loadpath=${BAUT_LOAD_PATH[@]}"
     fi
   fi
 
@@ -126,7 +126,7 @@ load() {
   declare -r libpath
   source "$libpath" "$@"
   if [ $? -ne 0 ]; then
-    abort "error: $(self -v2): failed to source '$lib'"
+    abort "error: $(self -vv): failed to source '$lib'"
   fi
   __baut_loaded_path["$libpath"]=1
 }
@@ -165,7 +165,7 @@ load_if_exists() {
   declare -r libpath
   source "$libpath" "$@"
   if [ $? -ne 0 ]; then
-    abort "error: $(self -v2): failed to source '$lib'"
+    abort "error: $(self -vv): failed to source '$lib'"
   fi
   __baut_loaded_path["$libpath"]=1
 }
@@ -174,7 +174,7 @@ load_if_exists() {
 #:
 #:
 loadable() {
-  [ $# -eq 0 ] && abort "error: $(self -v2): <file> is required"
+  [ $# -eq 0 ] && abort "error: $(self -vv): <file> is required"
   declare -r lib="$1"
   local libpath=
   local loadpath=
@@ -206,7 +206,7 @@ loadable() {
 #: ex: require lib-string
 #:
 require() {
-  [ $# -eq 0 ] && abort "error: $(self -v2): <file> is required"
+  [ $# -eq 0 ] && abort "error: $(self -vv): <file> is required"
   declare -r lib="$1"
   local libpath=
   local loadpath=
@@ -215,7 +215,7 @@ require() {
 
   if [ "${lib:0:1}" = "/" ]; then
     if [ ! -e "$lib" ]; then
-      abort "error: $(self -v2): file not found '$lib'"
+      abort "error: $(self -vv): file not found '$lib'"
     fi
     libpath="$(resolve_link "$lib")"
   else
@@ -226,7 +226,7 @@ require() {
       fi
     done < <(array_reverse "${BAUT_LOAD_PATH[@]}")
     if [ -z "$libpath" ]; then
-      abort "error: $(self -v2): file not found '$lib', loadpath=${BAUT_LOAD_PATH[@]}"
+      abort "error: $(self -vv): file not found '$lib', loadpath=${BAUT_LOAD_PATH[@]}"
     fi
   fi
 
@@ -234,7 +234,7 @@ require() {
     log_trace "load: $lib"
     source "$libpath" "$@"
     if [ $? -ne 0 ]; then
-      abort "error: $(self -v2): failed to source '$lib'"
+      abort "error: $(self -vv): failed to source '$lib'"
     fi
     __baut_loaded_path["$libpath"]=1
   fi
