@@ -4,13 +4,14 @@
 setup() {
   tmpfile="$(resolve_link "${TMPDIR:-.}/test_$$.sh")"
   tmpfile2="$(resolve_link "${TMPDIR:-.}/test_$$.2.sh")"
+  wrap_script="$(resolve_link "${TMPDIR:-.}/_all.sh")"
   not_test_file="$(resolve_link "${TMPDIR:-.}/test_$$.dummy")"
   not_test_file2="$(resolve_link "${TMPDIR:-.}/notest_$$.sh")"
 }
 
 #: @AfterEach
 teardown() {
-  /bin/rm -rf "$tmpfile" "$tmpfile2" "$not_test_file" "$not_test_file2" ||:
+  /bin/rm -rf "$tmpfile" "$tmpfile2" "$wrap_script" "$not_test_file" "$not_test_file2" ||:
 }
 
 test_run_option_s() {
@@ -120,30 +121,23 @@ EOF
   [[ "$result" =~ "1 file, 1 test, 1 ok, 0 failed, 0 skipped" ]]
 }
 
-
-test_run_2_files() {
+test_run_option_wrap_script() {
   cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
 #test_hoge() {
 #  echo "hoge"
 #}
-#test_hoge2() {
-#  echo "hoge"
-#}
-#test_fail() {
-#  [ 0 -eq 1 ]
-#}
 EOF
-  cat <<EOF | sed -e "s/^#//g" > "$tmpfile2"
-#test_hoge() {
-#  echo "hoge"
-#}
+  cat <<EOF > "$wrap_script"
+_setup() {
+  echo "_setup"
+}
+_cleanup() {
+  echo "_cleanup"
+}
 EOF
-  run baut run --no-color "$tmpfile" "$tmpfile2"
-  [[ "$result" =~ "#1 $tmpfile" ]]
-  [[ "$result" =~ "#2 $tmpfile2" ]]
-  [[ "$result" =~ "#$ 3 tests, 2 ok, 1 failed, 0 skipped" ]]
-  [[ "$result" =~ "#$ 1 test, 1 ok, 0 failed, 0 skipped" ]]
-  [[ "$result" =~ "2 files, 4 tests, 3 ok, 1 failed, 0 skipped" ]]
+  run baut run --no-color -w "$wrap_script" "$tmpfile"
+  [[ "$result" =~ "_setup" ]] || fail "$result"
+  [[ "$result" =~ "_cleanup" ]]
 }
 
 test_run_invalid_test_file() {

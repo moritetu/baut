@@ -11,6 +11,8 @@ declare -a after_all_functions=()
 declare -a before_each_functions=()
 declare -a after_each_functions=()
 declare -a output_buffer=()
+declare -a include_files=()
+
 
 lineno=0
 source_file=
@@ -34,10 +36,12 @@ reset_function_state() {
   func_annotations=()
 }
 
-#: compile
-#:   Compile $source_file.
+#: compile_internal
+#:   Compile input source.
 #:
-compile() {
+compile_internal() {
+  local input_file="${1:-$source_file}"
+
   while IFS= read -r line; do
     let lineno=lineno+1
 
@@ -61,7 +65,14 @@ compile() {
       fi
     fi
     append_buffer "$line"
-  done < "$source_file"
+  done < "$input_file"
+}
+
+#: compile
+#:   Compile $source_file.
+#:
+compile() {
+  compile_internal
 
   # Only report functions
   if [ ${options[countOnly]} -eq 1 ]; then
@@ -82,7 +93,7 @@ parse_annotation() {
   local ident=
   local value=
   # Syntax: @name(value)
-  if [[ $text =~ @([a-zA-Z_]+)(\((.+)\))? ]]; then
+  if [[ $text =~ @([.a-zA-Z_]+)(\((.+)\))? ]]; then
     ident="${BASH_REMATCH[1]}"
     value="${BASH_REMATCH[3]}"
     if [ -n "$ident" ]; then
@@ -93,6 +104,13 @@ parse_annotation() {
           else
             func_annotations[$ident]+="\n${value}"
           fi
+          ;;
+        "." | "source" | "include")
+          if [ ! -f "$value" ]; then
+            abort "error: $(self): file does not exist: $value"
+          fi
+          include_files[${#include_files[@]}]="$value"
+          compile_internal "$value"
           ;;
         *)
           log_warn "unknown annotation: $source_file(line:$lineno): $line"
@@ -222,6 +240,12 @@ baut_run_test_suit() {
   declare -ar after_each_functions=(${after_each_functions[@]:-})
   local BAUT_TEST_FUNCTION_NAME=
 VARS
+
+  # Include
+  local inc=
+  for inc in "${include_files[@]}"; do
+    printf '  source "%s" || abort "error: failed to include %s in %s"\n' "$inc" "'$inc'" "'$source_file'"
+  done
 
   # Before segment
   cat<<BEFORE

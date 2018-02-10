@@ -3,11 +3,12 @@
 #: @BeforeEach
 setup() {
   tmpfile="$(resolve_link "${TMPDIR:-.}/$$.sh")"
+  include_file="$(resolve_link "${TMPDIR:-.}/$$_inc.sh")"
 }
 
 #: @AfterEach
 teardown() {
-  /bin/rm -rf "$tmpfile" ||:
+  /bin/rm -rf "$tmpfile" "$include_file" ||:
 }
 
 test_option_count_only() {
@@ -159,4 +160,28 @@ test_compile_annotation_AfterEach() {
 EOF
   run baut compile "$tmpfile"
   [[ "$result" =~ "after_each_functions=(teardown)" ]]
+}
+
+test_compile_annotation_include() {
+    cat <<EOF | sed -e "s/^#//g" > "$include_file"
+##:@Test
+#test_func() {
+#  echo "test_func"
+#}
+EOF
+  cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
+##:@.($include_file)
+EOF
+  run baut compile "$tmpfile"
+  [[ "$result" =~ "test_func" ]]
+  cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
+##:@source($include_file)
+EOF
+  run baut compile "$tmpfile"
+  [[ "$result" =~ "test_func" ]]
+  cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
+##:@include($include_file)
+EOF
+  run baut compile "$tmpfile"
+  [[ "$result" =~ "test_func" ]]
 }

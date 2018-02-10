@@ -407,6 +407,23 @@ A function with ``@AfterAll`` is executed **only once** after all tests ends. Yo
      rm "$TMPDIR/*.tmp" ||:
    }
 
+@., @source, @include
+---------------------
+
+.. code-block:: bash
+
+   #: @.(<file>)
+   #: @source(<file>)
+   #: @include(<file>)
+
+``@.`` or ``@source`` or ``@include`` includes the specified file in the compiled source file.
+
+.. code-block:: bash
+
+   #: @.(test_a.sh)
+   #: @.(test_b.sh)
+   #: @.(test_c.sh)
+
 
 Common Variables
 ================
