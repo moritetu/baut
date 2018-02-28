@@ -8,12 +8,12 @@ function __install_baut() {
   local BASH_PROFILE=~/.bash_profile
   sed -i -e '/### start baut/,/### end baut/d' "$BASH_PROFILE"
 
-  cat <<EOS >> ~/.bash_profile
+  cat <<EOS >> "$BASH_PROFILE"
 ### start baut
 export PATH="$HERE/bin":"\$PATH"
 ### end baut
 EOS
-  source ~/.bash_profile
+  source "$BASH_PROFILE"
 }
 
 __install_baut
