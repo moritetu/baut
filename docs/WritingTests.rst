@@ -138,6 +138,26 @@ There may be when you want to read variables from all tests, in that case you ca
 
 ``setup_all`` function with ``@BeforeAll`` annotation is called only once before all tests start, and ``teardown_all`` function with ``@AfterAll`` annotation is called only once after all tests ends. These functions are executed in parent shell of tests, ``GLOBAL_VAR`` is visible from all tests. Outside of functions, ``EVALUATED_ONCE`` is also evaluated once with ``source`` command.
 
+OneTimeSetup/OneTimeTearDown
+============================
+
+If ``_all.sh`` file exists in the project top directory, Baut loads it. In ``_all.sh``, you can define functions
+called only once at the begin or the end of your test suite.
+
+.. code-block:: bash
+
+   #!/usr/bin/env bash
+   # _all.sh
+   #
+   _setup() {
+     echo "called at the begin of test suite"
+   }
+
+   _cleanup() {
+     echo "called at end begin of test suite"
+   }
+
+
 
 Commands
 ========

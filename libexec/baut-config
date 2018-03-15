@@ -36,6 +36,14 @@ BAUT_LOAD_PATH=( "${BAUT_HELPER:-$BAUT_ROOT/helpers}" "${BAUT_LIBEXEC:-}" "$PWD/
 #: The directory into which compiled files are output
 declare -r BAUT_TMPDIR=${BAUT_TMPDIR:-"${TMPDIR:-/tmp}"}
 
+#:@BAUT_ONETIME_SETUP
+#: The function called at the begin of test suite.
+: ${BAUT_ONETIME_SETUP:="_setup"}
+
+#:@BAUT_ONETIME_TEARDOWN
+#: The function called at the end of test suite.
+: ${BAUT_ONETIME_TEARDOWN:="_cleanup"}
+
 
 # show_config
 #   Print baut configurations.

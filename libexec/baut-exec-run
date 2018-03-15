@@ -33,7 +33,6 @@ test_end_time_sec=0
 # Test total count
 test_total_count=0
 
-
 #: parse_options [arg ...]
 #:   Parse command line options.
 #:
@@ -148,11 +147,11 @@ baut_perform_test_suite() {
   # If pre-process over all test exists, run it.
   if [ -f "${options[wrapScript]}" ]; then
     source "${options[wrapScript]}"
-    if type "_setup" &> /dev/null
+    if type "$BAUT_ONETIME_SETUP" &> /dev/null
     then
-       _setup || status=$?
+       $BAUT_ONETIME_SETUP || status=$?
        if [ $status -ne 0 ]; then
-         abort "error: failed to execute _setup in ${options[wrapScript]}"
+         abort "error: failed to execute ${BAUT_ONETIME_SETUP} in ${options[wrapScript]}"
        fi
     fi
   fi
@@ -169,11 +168,11 @@ baut_perform_test_suite() {
   test_end_time_sec="$(date +'%s')"
 
   # If after-process over all test exists, run it.
-  if type "_cleanup" &> /dev/null
+  if type "$BAUT_ONETIME_TEARDOWN" &> /dev/null
   then
-     _cleanup || status=$?
+     $BAUT_ONETIME_TEARDOWN || status=$?
      if [ $status -ne 0 ]; then
-       error "warn: failed to execute _cleanup in ${options[wrapScript]}"
+       error "warn: failed to execute ${BAUT_ONETIME_TEARDOWN} in ${options[wrapScript]}"
      fi
   fi
 
