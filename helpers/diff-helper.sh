@@ -27,7 +27,7 @@ run_diff() {
             diff -u "$expected_file" "$results_file" &> "$diff_file";
             echo $?)"
   if [ $status -eq 0 ]; then
-    rm "$diff_file"
+    /bin/rm "$diff_file"
   else
     echo "See $diff_file"
   fi
@@ -49,6 +49,62 @@ run_diffx() {
             [ ! -e "$expected_file" ] && echo 1 && exit;
             diff -u "$expected_file" "$results_file" &> "$diff_file";
             echo $?)"
+  if [ $status -eq 0 ]; then
+    [ -e "$diff_file" ] && rm "$diff_file"
+  else
+    echo "See $diff_file"
+  fi
+  pop_setopt
+  return $status
+}
+
+#: begin_comparing [filename]
+#:   Redirect output to the result file 'name' after this calling.
+#:   We use descriptor number 5 for stdout saving and 6 for stderr saving in this process.
+#: ex:
+#:   begin_comparing
+#:   echo "this result is written to the result file"
+begin_comparing() {
+  disable_setopt "eET"
+  local results_file="$DIFF_RESULTS_DIR/$BAUT_TEST_FUNCTION_NAME".out
+  if [ $# -gt 0 ]; then
+    results_file="$DIFF_RESULTS_DIR/$1".out
+  fi
+
+  log_trace "save stdout as 5 and stderr as 6"
+
+  # save stdout and stderr
+  exec 5>&1
+  exec 6>&2
+  # redirect stdout to the result_file
+  exec > "$results_file"
+}
+
+#: end_comparing [filename]
+#:   Stop redirect and compare the result with the expected.
+#: ex:
+#:   begin_comparing
+#:   echo "this result is written to the result file"
+#:   end_comparing
+end_comparing() {
+  # at first, we close the temporary file descriptor
+  exec 1>&5 5>&-
+  exec 2>&6 6>&-
+
+  local results_file="$DIFF_RESULTS_DIR/$BAUT_TEST_FUNCTION_NAME".out
+  local expected_file="$DIFF_EXPECTED_DIR/$BAUT_TEST_FUNCTION_NAME".out
+  local diff_file="$DIFF_RESULTS_DIR/$BAUT_TEST_FUNCTION_NAME".out.diff
+
+  if [ $# -gt 0 ]; then
+    results_file="$DIFF_RESULTS_DIR/$1".out
+    expected_file="$DIFF_EXPECTED_DIR/$1".out
+    diff_file="$DIFF_RESULTS_DIR/$1".out.diff
+  fi
+
+  status="$([ ! -e "$expected_file" ] && echo 1 && exit;
+            diff -u "$expected_file" "$results_file" &> "$diff_file";
+            echo $?)"
+
   if [ $status -eq 0 ]; then
     [ -e "$diff_file" ] && rm "$diff_file"
   else

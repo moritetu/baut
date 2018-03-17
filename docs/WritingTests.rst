@@ -463,6 +463,47 @@ Common Variables
 ``after_each_functions`` (Array)
 
 
+Helpers
+=======
+
+Baut gives additional features as helper.
+
+diff-helper.sh
+--------------
+
+By using ``diff-helper.sh``, you can compare the real result with the expected one by ``diff`` command. The real result is
+written into ``result/<testname>.out``, and you need to make a expected result as ``expected/<testname>.out`` to compare the real result.
+
+.. code-block:: bash
+
+   # test_diff.sh
+   load "diff-helper.sg"
+
+   function test_case_diff() {
+     # this result is written into ``results/test_case_diff.out``.
+     run_diffx echo "hello"
+   }
+
+And you need to make the following file to pass the test.
+
+.. code-block:: bash
+
+   # expected/test_case_diff.out
+   hello
+
+
+You can also choose a method to temporarily redirect the output as following.
+
+.. code-block:: bash
+
+   test_comparing() {
+     begin_comparing # start output redirect.
+     echo "this output is written into a result file"
+     echo "and this output is also written into the result file" >&2
+     end_comparing   # here, the real result is compared with the expected one.
+   }
+
+
 Other APIs
 ==========
 
