@@ -1,4 +1,6 @@
 docs/_build/
-templates/postgresql/results
-templates/mysql/results
+templates/*/results
+templates/*/logs
+
 dump.rdb
+.vagrant

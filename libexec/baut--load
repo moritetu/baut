@@ -376,14 +376,16 @@ text_color_on() {
   local background_color="${2:-}"
   local attribute="${3:-}"
   local colorset=()
-  [ -n "$foreground_color" ] && colorset[${colorset[@]:-0}]="3$foreground_color"
-  [ -n "$background_color" ] && colorset[${colorset[@]:-0}]="4$background_color"
-  [ -n "$attribute" ] && colorset[${colorset[@]:-0}]="$attribute"
-  __baut_text_color=""
-  if [ ${#colorset[@]} -gt 0 ]; then
-    __baut_text_color="$(IFS=";" ; echo "${colorset[*]}")"
-  fi
-  printf "\033[${__baut_text_color}m"
+  endpoint_is_terminal && {
+    [ -n "$foreground_color" ] && colorset[${colorset[@]:-0}]="3$foreground_color"
+    [ -n "$background_color" ] && colorset[${colorset[@]:-0}]="4$background_color"
+    [ -n "$attribute" ] && colorset[${colorset[@]:-0}]="$attribute"
+    __baut_text_color=""
+    if [ ${#colorset[@]} -gt 0 ]; then
+      __baut_text_color="$(IFS=";" ; echo "${colorset[*]}")"
+    fi
+    printf "\033[${__baut_text_color}m"
+  }
 }
 
 #: text_color_off
@@ -391,7 +393,9 @@ text_color_on() {
 #:
 text_color_off() {
   __baut_text_color=
-  printf "\033[m"
+  endpoint_is_terminal && {
+    printf "\033[m"
+  }
 }
 
 #: text_color <msg> 3<foreground_color> 4<background_color> <attribute>
@@ -405,6 +409,12 @@ text_color() {
   text_color_off
 }
 
+#: endpoint_is_terminal
+#:   Check whether endpoint is terminal.
+#:
+endpoint_is_terminal() {
+  test -t 1 -o -t 2
+}
 
 #: Comment
 

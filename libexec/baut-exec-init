@@ -5,11 +5,11 @@ enable_setopt "euET"
 
 trap 'abort "error: $(self): failed to copy"' ERR
 
-template="$BAUT_ROOT/templates/default"
+template=
 declare -A variables=()
 declare -A options=(
-  [silent]=0
   [force]=0
+  [showTemplate]=0
 )
 
 #: init_project
@@ -34,9 +34,6 @@ init_project() {
     mv -f "$bak_file" "$file"
     [[ "$file" =~ .*\.sh ]] && chmod +x "$file"
   done
-  if [ -e "$template/README" ] && [ ${options[silent]} -ne 1 ]; then
-    cat "$template/README"
-  fi
 }
 
 #: make_replace_strings_rule
@@ -49,6 +46,43 @@ make_replace_strings_rule() {
   done
 }
 
+#: show_templates
+#:   Print available templates.
+#:
+show_templates() {
+  local tmpl
+  if [ -z "$template" ]; then
+    echo "[Available Templates]"
+    for tmpl in $(find "$BAUT_ROOT/templates" -mindepth 1 -maxdepth 1 -type d); do
+      printf " %s\n"  "$(basename "$tmpl")"
+    done
+  else
+    printf "[Template %s] ~ %b\n" "$(basename "$template")" "$(text_color "$template" 0 "" 1)"
+    printf "\n"
+    if [ -e "$template/README" ]; then
+      cat "$template/README"
+    else
+      if type trees &> /dev/null ; then
+        tree "$template"
+      else
+        local fnum= dnum=0
+        basename "$template"
+        for tmpl in $(find "$template" -mindepth 1); do
+          if [ -d "$tmpl" ]; then
+            printf " d %s\n"  "$(basename "$tmpl")"
+            let dnum+=1
+          else
+            printf " f %s\n"  "$(basename "$tmpl")"
+            let fnum+=1
+          fi
+        done
+        printf "\n"
+        printf "$fnum files, $dnum directories\n"
+      fi
+    fi
+  fi
+  printf "\n"
+}
 
 # Parse command line options.
 while [ $# -gt 0 ]; do
@@ -71,8 +105,8 @@ while [ $# -gt 0 ]; do
     -f)
       options[force]=1
       ;;
-    -s | --silent)
-      options[silent]=1
+    -i)
+      options[showTemplate]=1
       ;;
     -*)
       abort "error: $(self): invalid option: $1"
@@ -86,17 +120,26 @@ done
 
 outdir="${1:-.}"
 
-if [ ! -e "$template" ]; then
-  abort "error: $(self): template not found: $template"
-fi
-
 if [ ! -e "$outdir" ]; then
   mkdir -p "$outdir"
 fi
 
-init_project
+if [ ${options[showTemplate]} -eq 1 ]; then
+  show_templates
+else
+  # use default template
+  if [ -z "$template" ]; then
+    template="$BAUT_ROOT/templates/default"
+  fi
 
-exit
+  if [ ! -e "$template" ]; then
+    abort "error: $(self): template not found: $template"
+  fi
+
+  init_project
+fi
+
+exit $?
 
 #=begin COMMAND
 #
@@ -106,7 +149,7 @@ exit
 
 #=begin HELP
 #
-# Usage: baut init [-t <template>] [-f] [-s] <outdir>
+# Usage: baut init [-t <template>] [-f] [-i] <outdir>
 #
 # Generates test files from a template. 'init' just copies files or directories
 # with the specified template.
@@ -115,10 +158,11 @@ exit
 #   -t, --template <template>
 #     Copies from a specified template.
 #
+#   -i
+#     Shows available templates.
+#
 #   -f
 #     Overwrites.
-#   -s
-#     Silently.
 #
 #   -DVARNAME=VALUE
 #     Passes the specified variables to place holders.
