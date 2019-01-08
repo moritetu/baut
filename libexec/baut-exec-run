@@ -156,6 +156,7 @@ baut_perform_test_suite() {
     fi
   fi
 
+  status=0
   test_begin_time_sec="$(date +'%s')"
   for baut_file in "${baut_files[@]}"; do
     log_trace "==> execute tests: $baut_file"
@@ -168,6 +169,7 @@ baut_perform_test_suite() {
   test_end_time_sec="$(date +'%s')"
 
   # If after-process over all test exists, run it.
+  status=0
   if type "$BAUT_ONETIME_TEARDOWN" &> /dev/null
   then
      $BAUT_ONETIME_TEARDOWN || status=$?

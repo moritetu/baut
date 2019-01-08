@@ -6,12 +6,19 @@ SQLDIR="$(__DIR__)/sql"
 
 #: @BeforeAll
 setup_all() {
+  local status=0
   export PGDATA="$(__DIR__)/pgdata"
   export PGDATABASE=sample
   {
-    initdb --encoding=utf8 "$(__DIR__)/pgdata"
+    if [ -d "$PGDATA" ]; then
+      rm -rf "$PGDATA"
+    fi
+    initdb --encoding=utf8 "$PGDATA"
     pg_ctl -w start
-  } &> /dev/null
+  } &> /dev/null || status=$?
+  if [ $status -ne 0 ]; then
+    fail "cannot start server"
+  fi
 #  export PGPORT=11003
   dropdb --if-exists sample
   createdb --encoding=utf8 sample
