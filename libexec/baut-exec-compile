@@ -260,7 +260,7 @@ BEFORE
   local i=1
   local deprecated= todo=
   local deprecated_value= func_alias_value= todo_value=
-  for func_name in "${test_functions[@]}"; do
+  for func_name in "${test_functions[@]:-}"; do
     echo "  # => $i: $func_name"
     printf "%s" "  BAUT_TEST_FUNCTION_NAME='${func_name}';"
     deprecated="$(hash_get "$func_name" "Deprecated")"
