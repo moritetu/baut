@@ -476,6 +476,7 @@ _baut_exit_trap() {
   else
     baut_report_code_err "$BAUT_TEST_FUNCTION_NAME"
     if [ ${baut_test_options[stopOnError]} -eq 1 ] || [ $trap_exit_status -eq 3 ]; then
+      baut_report_code_end_test "$BAUT_TEST_FUNCTION_NAME" "$trap_exit_status"
       exit $trap_exit_status
     fi
   fi
