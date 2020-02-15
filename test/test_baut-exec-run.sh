@@ -30,6 +30,15 @@ EOF
 }
 
 test_run_option_d() {
+  cat <<EOF | sed -e "s/^#//g" > "$wrap_script"
+#_setup() {
+#  :
+#}
+#_cleanup() {
+#  :
+#}
+EOF
+
   cat <<EOF | sed -e "s/^#//g" > "$tmpfile"
 ##:@BeforeEach
 #setup() {
@@ -47,11 +56,13 @@ test_run_option_d() {
 #}
 EOF
   run baut run -d "$tmpfile"
+  [[ "$result" =~ "_setup" ]]
   [[ "$result" =~ "(0) before_all_functions =>" ]]
   [[ "$result" =~ "(1) before_each_functions => setup" ]]
   [[ "$result" =~ "(2) test_functions => test_hoge test_hoge2" ]]
   [[ "$result" =~ "(1) after_each_functions => teardown" ]]
   [[ "$result" =~ "(0) after_all_functions =>" ]]
+  [[ "$result" =~ "_cleanup" ]]
   [[ "$result" =~ "1 file, 2 tests" ]]
 }
 

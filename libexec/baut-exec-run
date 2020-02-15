@@ -357,6 +357,24 @@ dry_run() {
   local line fields label funcs test_file
   local file_num="${#test_targets[@]}"
   local test_num=0
+  local _all= onetime_setup= onetime_teardown=
+
+  if [ -f "${options[wrapScript]}" ]; then
+    source "${options[wrapScript]}"
+    _all=$(resolve_link "${options[wrapScript]}")
+    if type "$BAUT_ONETIME_SETUP" &> /dev/null; then
+        onetime_setup="$BAUT_ONETIME_SETUP"
+    fi
+    if type "$BAUT_ONETIME_TEARDOWN" &> /dev/null; then
+        onetime_teardown="$BAUT_ONETIME_TEARDOWN"
+    fi
+  fi
+
+  if [ -n "$onetime_setup" ]; then
+    echo "[*] $_all"
+    echo " └─ $BAUT_ONETIME_SETUP"
+  fi
+
   for test_file in "${test_targets[@]}"; do
     printf "[%d] %s\n" "$i" "$test_file"
     while IFS= read -r line; do
@@ -375,6 +393,12 @@ dry_run() {
     done < <(baut-exec-compile --show-functions "$test_file")
     ((i+=1))
   done
+
+  if [ -n "$onetime_teardown" ]; then
+    echo "[*] $_all"
+    echo " └─ $BAUT_ONETIME_TEARDOWN"
+  fi
+
   printf "\n"
   printf "%s" "$(plural "%d file" "$file_num")"
   printf ", %s\n" "$(plural "%d test" "$test_num")"

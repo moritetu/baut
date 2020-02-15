@@ -3,7 +3,7 @@
 # Run test suite for baut.
 #
 set -eu
-BAUT_ROOT="$(cd -P -- "$(dirname -- "${BASH_SOURCE:-$0}")" && pwd -P)"
+BAUT_ROOT="$(cd -P "$(dirname "${BASH_SOURCE:-$0}")" && pwd -P)"
 BAUT_LIBEXEC="$BAUT_ROOT/libexec"
 
 print_label() {
