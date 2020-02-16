@@ -65,6 +65,13 @@ if [ "$BAUT_REPORT_CONTEXT" = "reporter" ]; then
     baut_report_print_args "$1"
   }
 
+  #: baut_report_code_err1 <function>
+  #:   Print code ERR1. Sent when process outside test failed.
+  #:
+  baut_report_code_err1() {
+    baut_report_print_code "ERR1"
+    baut_report_print_args "$1"
+  }
 
   #: baut_report_code_skip <function> [<message>]
   #:   Print code SKP. Sent when a test skipped.

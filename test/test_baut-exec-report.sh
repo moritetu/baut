@@ -78,6 +78,22 @@ test_exec_report_ERR0() {
   [[ "${lines[2]}" =~ "!ERROR test_hoge" ]]
 }
 
+test_exec_report_ERR1() {
+  code="#:RDY;1\t1\n"
+  code+="#:STR;hoge.baut\thoge.sh\t1\n"
+  code+="#:STRT;test_hoge\n"
+  code+="ERROR MESSAGE\n"
+  code+="#:ERR1;test_hoge\n"
+  code+="#:ENDT;test_hoge\t1\n"
+  code+="#:END;hoge.baut\thoge.sh\n"
+
+  eval2 "printf '%b' '$code' | baut report --no-color"
+  [[ "${lines[0]}" =~ "1 file, 1 test" ]]
+  [[ "${lines[1]}" =~ "#1 hoge.sh" ]]
+  [[ "${lines[2]}" =~ "!ERROR test_hoge" ]]
+  [[ "${lines[3]}" =~ "ERROR MESSAGE" ]]
+}
+
 test_exec_report_STP() {
   code="#:RDY;1\t1\n"
   code+="#:STR;hoge.baut\thoge.sh\t1\n"

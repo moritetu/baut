@@ -64,6 +64,16 @@ do
         printf "\n"
         baut_report_end_color
         ;;
+      ERR1)
+        baut_report_begin_color 1 "" 1
+        printf "!ERROR %s\n" "${test_alias_name:-${test_name:-${args[0]}}}"
+        baut_report_end_color
+        baut_report_begin_color 1 ""
+        baut_report_flush_buffer
+        baut_report_end_color
+        test_name=""
+        test_alias_name=""
+        ;;
       STRT) # Begin a test
         test_name="${args[0]}"
         test_alias_name="${args[1]:-}"

@@ -38,6 +38,12 @@ do
         fi
         baut_report_sum_test_set_report
         ;;
+      ERR0|ERR1)
+        printf "#!ERROR %s\n" "${test_alias_name:-${test_name:-${args[0]}}}"
+        baut_report_flush_buffer "# "
+        test_name=""
+        test_alias_name=""
+        ;;
       STRT) # Begin a test
         test_name="${args[0]}"
         test_alias_name="${args[1]:-}"

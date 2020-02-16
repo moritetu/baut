@@ -10,12 +10,21 @@ load "baut--test-report" "reporter"
 #:
 baut_before_all() {
   __baut_running_function="$(self)"
-  local func_name
+  local func_name ret
   if [ ${#before_all_functions[@]} -gt 0 ]; then
-    for func_name in "${before_all_functions[@]}"; do
-      "$func_name"
-      IFS="$__baut_old_IFS"
+    _baut_enable_debug_trap
+    for func_name in "${before_all_functions[@]:-}"; do
+      ret=0
+      baut_report_code_begin_test "$func_name"
+      "$func_name" || ret=$?
+      if [ $ret -ne 0 ]; then
+        baut_print_stack_trace "$ret" 1
+        baut_report_code_err1 "$func_name"
+        return $ret
+      fi
+      baut_report_code_end_test "$func_name" 0
     done
+    _baut_disable_debug_trap
   fi
 }
 
@@ -24,12 +33,21 @@ baut_before_all() {
 #:
 baut_after_all() {
   __baut_running_function="$(self)"
-  local func_name
+  local func_name ret
   if [ ${#after_all_functions[@]} -gt 0 ]; then
+    _baut_enable_debug_trap
     for func_name in "${after_all_functions[@]:-}"; do
-      "$func_name"
-      IFS="$__baut_old_IFS"
+      ret=0
+      baut_report_code_begin_test "$func_name"
+      "$func_name" || ret=$?
+      if [ $ret -ne 0 ]; then
+        baut_print_stack_trace "$ret" 1
+        baut_report_code_err1 "$func_name"
+        return $ret
+      fi
+      baut_report_code_end_test "$func_name" 0
     done
+    _baut_disable_debug_trap
   fi
 }
 
@@ -42,6 +60,7 @@ baut_start_test() {
   add_trap_callback "ERR" "baut_next_test"
   register_trap_callback "EXIT" "ERR"
   baut_report_code_begin_test_set "$BAUT_FILE" "$BAUT_TEST_FILE" "${#BAUT_TEST_FUNCTIONS[@]}"
+  __baut_need_after_all=1
   "$test_start_function"
 }
 
@@ -54,6 +73,7 @@ baut_end_test() {
   # if [ $pipe_num -ne 0 ]; then
   #   return
   # fi
+
   baut_report_code_end_test_set "$BAUT_FILE" "$BAUT_TEST_FILE"
 }
 
@@ -63,11 +83,10 @@ baut_end_test() {
 baut_next_test() {
   local status="$baut_trap_exit_status"
   if [ -z "$BAUT_TEST_FUNCTION_NAME" ]; then
-    if [ "$__baut_running_function" = "baut_before_all" ] \
-         || [ "$__baut_running_function" = "baut_after_all" ]; then
-      baut_report_code_err0 "$__baut_running_function"
-      exit $status
+    if [ $__baut_need_after_all -eq 1 ]; then
+      baut_after_all
     fi
+    exit $status
   fi
 
   if [ $status -ne 0 ]; then
@@ -189,6 +208,10 @@ stderr_lines=()
 __baut_test_error=0
 __baut_test_skip=0
 __baut_running_function=""
+__baut_doing_test=0
+__baut_need_after_each=0
+__baut_need_after_all=0
+
 
 readonly __baut_old_IFS="$IFS"
 
@@ -368,6 +391,7 @@ baut_run_test() {
   local test_alias_name="$1"
   __baut_running_function="$(self)"
   __baut_test_error=0
+  __baut_doing_test=0
 
   if [ -n "${baut_test_options[functionMatch]:-}" ]; then
     if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[functionMatch]} ]]; then
@@ -382,15 +406,17 @@ baut_run_test() {
   add_trap_callback "ERR" "_baut_error_trap"
   register_trap_callback "EXIT" "ERR"
 
+  __baut_need_after_each=1
+
   baut_before_each
   {
-    # In running a test, we do not set 'e' options to catch error.
-    disable_setopt "e"
+    __baut_doing_test=1
     _baut_enable_debug_trap
     "$BAUT_TEST_FUNCTION_NAME"
     _baut_disable_debug_trap
-    pop_setopt
+    __baut_doing_test=0
   }
+  __baut_need_after_each=0
   baut_after_each
 }
 
@@ -402,6 +428,7 @@ baut_run_todo_test() {
   local test_alias_name="${2:-}"
   __baut_running_function="$(self)"
   __baut_test_error=0
+  __baut_doing_test=0
 
   if [ -n "${baut_test_options[functionMatch]:-}" ]; then
     if [[ ! "$BAUT_TEST_FUNCTION_NAME" =~ ${baut_test_options[functionMatch]} ]]; then
@@ -416,16 +443,17 @@ baut_run_todo_test() {
   add_trap_callback "ERR" "_baut_error_trap"
   register_trap_callback "EXIT" "ERR"
 
+  __baut_need_after_each=1
+
   baut_before_each
   {
-    # In running a test, we do not set 'e' options to catch error.
-    disable_setopt "e"
+    __baut_doing_test=1
     _baut_enable_debug_trap
     "$BAUT_TEST_FUNCTION_NAME"
-    IFS="$__baut_old_IFS"
     _baut_disable_debug_trap
-    pop_setopt
+    __baut_doing_test=0
   }
+  __baut_need_after_each=0
   baut_after_each
 }
 
@@ -434,12 +462,16 @@ baut_run_todo_test() {
 #:
 baut_before_each() {
   __baut_running_function="$(self)"
-  local func_name
+  local func_name ret
   if [ ${#before_each_functions[@]} -gt 0 ]; then
     _baut_enable_debug_trap
     for func_name in "${before_each_functions[@]:-}"; do
-      "$func_name"
-      IFS="$__baut_old_IFS"
+      ret=0
+      "$func_name" || ret=$?
+      if [ $ret -ne 0 ]; then
+        baut_print_stack_trace "$ret" 1
+        return $ret
+      fi
     done
     _baut_disable_debug_trap
   fi
@@ -450,12 +482,16 @@ baut_before_each() {
 #:
 baut_after_each() {
   __baut_running_function="$(self)"
-  local func_name
+  local func_name ret
   if [ ${#after_each_functions[@]} -gt 0 ]; then
     _baut_enable_debug_trap
     for func_name in "${after_each_functions[@]:-}"; do
-      "$func_name"
-      IFS="$__baut_old_IFS"
+      ret=0
+      "$func_name" || ret=$?
+      if [ $ret -ne 0 ]; then
+        baut_print_stack_trace "$ret" 1
+        return $ret
+      fi
     done
     _baut_disable_debug_trap
   fi
@@ -491,6 +527,14 @@ _baut_exit_trap() {
 _baut_error_trap() {
   __baut_test_error="$baut_trap_exit_status"
   reset_trap_callback "ERR"
-  baut_print_stack_trace "$baut_trap_exit_status"
+
+  if [ $__baut_doing_test -eq 1 ]; then
+    baut_print_stack_trace "$baut_trap_exit_status"
+  fi
+  if [ $__baut_need_after_each -eq 1 ]; then
+    __baut_need_after_each=0
+    baut_after_each
+  fi
+
   exit $__baut_test_error
 }
