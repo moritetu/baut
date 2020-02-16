@@ -41,7 +41,10 @@ while [ $# -gt 0 ]; do
       if [ "$COMMAND" = "help" ]; then
         shift
         [ -z "${1:-}" ] && baut-help && exit
-        get_comment_block "$(baut_exec_command "$1")" "HELP"
+        if [ ! -f "$1" ]; then
+            abort "not found: $1"
+        fi
+        get_comment_block "$1" "HELP"
         exit
       fi
 
