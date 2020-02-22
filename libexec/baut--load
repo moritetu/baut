@@ -740,7 +740,7 @@ reset_trap_callback() {
   else
     __baut_enable_trap=()
   fi
-  for signame in "${signals[@]}"; do
+  for signame in "${signals[@]:-}"; do
     local size="$(hash_get "trap_$signame")"
     hash_delete "trap_$signame"
     if [ -n "$size" ]; then
@@ -749,7 +749,9 @@ reset_trap_callback() {
         ((size-=1,1))
       done
     fi
-    unset __baut_enable_trap["$signame"]
+    if [ -n "${__baut_enable_trap['$signame']:-}" ]; then
+      unset __baut_enable_trap["$signame"]
+    fi
   done
 }
 
@@ -768,6 +770,7 @@ register_trap_callback() {
   if [ $# -ne 0 ]; then
     signals=("$@")
   fi
+
   for signame in "${signals[@]}"; do
     if [ -z "${__baut_enable_trap[$signame]:-}" ]; then
       continue
