@@ -33,7 +33,7 @@ while [ $# -gt 0 ]; do
         c) COMMAND=compile ;;
         i) COMMAND=init ;;
         t) COMMAND=test ;;
-        R) COMMAND=report ;;
+        p) COMMAND=report ;;
       esac
 
       # If the command equals "help", show usage of the command.
